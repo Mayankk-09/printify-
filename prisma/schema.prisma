@@ -1,0 +1,212 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  student
+  admin
+}
+
+enum OrderStatus {
+  SUBMITTED
+  ACCEPTED
+  PRINTING
+  READY
+  COLLECTED
+  CANCELLED
+}
+
+enum PrintMode {
+  BW
+  COLOR
+}
+
+enum PrintSide {
+  SINGLE
+  DOUBLE
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+model User {
+  id             String         @id @default(cuid())
+  name           String
+  email          String         @unique
+  passwordHash   String
+  phone          String?
+  role           UserRole       @default(student)
+  image          String?
+  emailVerified  DateTime?
+  dismissedPlanReminder Boolean  @default(false)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  subscriptions  Subscription[]
+  orders         Order[]
+  payments       Payment[]
+}
+
+model Plan {
+  id            String         @id @default(cuid())
+  name          String
+  slug          String         @unique
+  description   String?
+  monthlyPrice  Int
+  pagesIncluded Int
+  supportsColor Boolean        @default(false)
+  validityDays  Int            @default(30)
+  active        Boolean        @default(true)
+  displayOrder  Int            @default(0)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  subscriptions Subscription[]
+}
+
+model Subscription {
+  id            String         @id @default(cuid())
+  userId        String
+  planId        String
+  status        String         @default("active")
+  pagesAllowed  Int
+  pagesUsed     Int            @default(0)
+  startDate     DateTime       @default(now())
+  expiryDate    DateTime
+  cancelledAt   DateTime?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan          Plan           @relation(fields: [planId], references: [id])
+
+  @@index([userId])
+  @@index([planId])
+  @@index([status])
+}
+
+model Order {
+  id            String         @id @default(cuid())
+  orderNumber   String         @unique
+  userId        String
+  status        OrderStatus    @default(SUBMITTED)
+  fileName      String
+  filePath      String
+  fileSize      Int?
+  pages         Int
+  copies        Int            @default(1)
+  printMode     PrintMode      @default(BW)
+  printSide     PrintSide      @default(SINGLE)
+  addons        Json           @default("{}")
+  addonCost     Int            @default(0)
+  notes         String?
+  pickupDate    DateTime?
+  pickupSlot    String?
+  submittedAt   DateTime       @default(now())
+  acceptedAt    DateTime?
+  printingAt    DateTime?
+  readyAt       DateTime?
+  collectedAt   DateTime?
+  cancelledAt   DateTime?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pickupCode    PickupCode?
+  orderItems    OrderItem[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([orderNumber])
+}
+
+model OrderItem {
+  id        String   @id @default(cuid())
+  orderId   String
+  name      String
+  quantity  Int      @default(1)
+  price     Int
+  createdAt DateTime @default(now())
+
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+}
+
+model UploadedFile {
+  id             String   @id @default(cuid())
+  userId         String
+  originalName   String
+  storedPath     String
+  mimeType       String
+  size           Int
+  pageCount      Int?
+  createdAt      DateTime @default(now())
+
+  @@index([userId])
+}
+
+model Payment {
+  id             String        @id @default(cuid())
+  userId         String
+  subscriptionId String?
+  orderId        String?
+  razorpayId     String?
+  razorpayOrderId String?
+  amount         Int
+  currency       String        @default("INR")
+  status         PaymentStatus @default(PENDING)
+  description    String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([razorpayId])
+}
+
+model PickupCode {
+  id          String       @id @default(cuid())
+  orderId     String       @unique
+  code        String       @unique
+  generatedAt DateTime     @default(now())
+  collectedAt DateTime?
+
+  order       Order        @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([code])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  action    String
+  entity    String
+  entityId  String?
+  details   Json?
+  ip        String?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+}
+
+model SystemSetting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String
+  type      String   @default("string")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

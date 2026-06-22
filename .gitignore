@@ -1,0 +1,24 @@
+# dependencies
+node_modules/
+
+# next
+.next/
+
+# environment
+.env
+.env.local
+.env.production
+
+# uploads
+uploads/
+public/uploads/
+
+# IDE
+.idea/
+.vscode/
+
+# build cache
+tsconfig.tsbuildinfo
+
+# logs
+*.log

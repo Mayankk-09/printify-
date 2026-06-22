@@ -1,0 +1,106 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+
+:root {
+  --bg-deep: #070b14;
+  --bg-space: #0c1220;
+  --bg-card: rgba(18, 26, 43, 0.88);
+  --bg-card-hover: rgba(23, 33, 54, 0.96);
+  --bg-elevated: #111a2c;
+  --bg-soft: rgba(255, 255, 255, 0.055);
+  --bg-surface: #0f1629;
+
+  --primary-indigo: #8b5cf6;
+  --primary-glow: rgba(139, 92, 246, 0.22);
+  --accent-cyan: #22d3ee;
+  --accent-cyan-glow: rgba(34, 211, 238, 0.18);
+  --accent-magenta: #f472b6;
+  --accent-red: #fb7185;
+  --accent-green: #34d399;
+  --accent-amber: #fbbf24;
+
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+
+  --border-glass: rgba(148, 163, 184, 0.14);
+  --border-active: rgba(139, 92, 246, 0.72);
+  --border-hover: rgba(148, 163, 184, 0.25);
+
+  --status-submitted: #94a3b8;
+  --status-accepted: #60a5fa;
+  --status-printing: #fbbf24;
+  --status-ready: #34d399;
+  --status-collected: #a78bfa;
+
+  --font-main: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+
+  --shadow-soft: 0 20px 70px rgba(0, 0, 0, 0.35);
+  --shadow-card: 0 16px 40px rgba(0, 0, 0, 0.28);
+  --shadow-ring: 0 0 0 1px rgba(255, 255, 255, 0.05), 0 18px 45px rgba(0, 0, 0, 0.24);
+  --shadow-elevated: 0 25px 50px rgba(0, 0, 0, 0.5);
+
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+
+  --transition-fast: 0.16s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-normal: 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: var(--font-main);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+html {
+  background: var(--bg-deep);
+  font-size: 16px;
+}
+
+body {
+  min-height: 100vh;
+  overflow-x: hidden;
+  background:
+    radial-gradient(ellipse at 20% 0%, rgba(139, 92, 246, 0.12), transparent 32rem),
+    radial-gradient(ellipse at 90% 8%, rgba(34, 211, 238, 0.08), transparent 28rem),
+    linear-gradient(180deg, #070b14 0%, #0a0f1c 48%, #070b14 100%);
+  color: var(--text-primary);
+  line-height: 1.6;
+}
+
+button, input, select, textarea {
+  font: inherit;
+}
+
+button {
+  -webkit-tap-highlight-color: transparent;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.2);
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.35);
+}

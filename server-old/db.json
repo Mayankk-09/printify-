@@ -1,0 +1,120 @@
+{
+  "users": [
+    {
+      "id": "admin-id",
+      "name": "Print Room Admin",
+      "email": "admin@college.edu",
+      "passwordHash": "$2a$10$QeGQjwRNlFoCSpdrT/ZNx.mIoUdBq4NZtJnm6Ubx43xymGU5WcpoK",
+      "phone": "9999999999",
+      "course": "IT/Management",
+      "year": "Faculty",
+      "role": "admin"
+    },
+    {
+      "id": "operator-id",
+      "name": "Print Room Operator",
+      "email": "operator@college.edu",
+      "passwordHash": "$2a$10$I9vld4otCipFylGfBsFJX.DbLEjP2AOdYh7.BYf.uJYi4kfx7n.je",
+      "phone": "8888888888",
+      "course": "Facility Operations",
+      "year": "Staff",
+      "role": "operator"
+    },
+    {
+      "id": "ignz90uju",
+      "name": "Test Student Account",
+      "email": "test_student_tm7lg8@college.edu",
+      "phone": "1234567890",
+      "course": "BCA",
+      "year": "2nd Year",
+      "passwordHash": "$2a$10$hHKVc.3XoqDSEWMT64qGFeoaAe/bYOwJougoDC9YTznAhsg4eQkV2",
+      "role": "student"
+    },
+    {
+      "id": "fqfvjlpse",
+      "name": "Test Student Account",
+      "email": "test_student_ie5sa9@college.edu",
+      "phone": "1234567890",
+      "course": "BCA",
+      "year": "2nd Year",
+      "passwordHash": "$2a$10$qr3bYyrBne1cPpPXbxNZc./DQVnZYn.0wRpyiZP2XA6kpbTzorIEe",
+      "role": "student"
+    },
+    {
+      "id": "k4etww3td",
+      "name": "Demo Student Account",
+      "email": "student@vips.edu",
+      "phone": "9999988888",
+      "course": "B.Tech CSE",
+      "year": "3rd Year",
+      "passwordHash": "$2a$10$d1ibXtgAvkfQupEQkFRYx.qI7IGAYwx8zH9pSGfT3OBl7.VTL9mui",
+      "role": "student"
+    },
+    {
+      "id": "dy5sdhyyf",
+      "name": "DHAIRYA GUPTA",
+      "email": "00517749524_csam@vipstc.edu.in",
+      "phone": "5645612612651",
+      "course": "BCA",
+      "year": "1st Year",
+      "passwordHash": "$2a$10$bQJ1p8/L.UwpyXLaHKz5wOeJjEmtJwqZlMLxKAN4ZsdckE5Jp8yzO",
+      "role": "student"
+    }
+  ],
+  "subscriptions": [
+    {
+      "id": "6l2zeg54d",
+      "userId": "k4etww3td",
+      "plan": "hybrid_pro",
+      "planName": "Hybrid Pro",
+      "planRank": 3,
+      "price": 749,
+      "pagesAllowed": 100,
+      "pagesUsed": 0,
+      "supportsColor": true,
+      "startDate": "2026-06-17T09:28:29.472Z",
+      "expiryDate": "2026-07-17T09:28:29.472Z",
+      "status": "active",
+      "history": [
+        {
+          "plan": "starter_bw",
+          "planName": "Starter B&W",
+          "pagesAllowed": 50,
+          "pagesUsed": 0,
+          "startedAt": "2026-06-16T08:25:04.131Z",
+          "endedAt": "2026-06-16T10:00:04.334Z"
+        },
+        {
+          "plan": "standard_bw",
+          "planName": "Standard B&W",
+          "pagesAllowed": 100,
+          "pagesUsed": 0,
+          "startedAt": "2026-06-16T10:00:04.334Z",
+          "endedAt": "2026-06-17T09:28:29.472Z"
+        }
+      ]
+    },
+    {
+      "id": "0fs0iwjnb",
+      "userId": "dy5sdhyyf",
+      "plan": "hybrid_pro",
+      "planName": "Hybrid Pro",
+      "planRank": 3,
+      "price": 749,
+      "pagesAllowed": 100,
+      "pagesUsed": 0,
+      "supportsColor": true,
+      "startDate": "2026-06-16T08:26:40.560Z",
+      "expiryDate": "2026-07-16T08:26:40.560Z",
+      "status": "active",
+      "history": []
+    }
+  ],
+  "orders": [],
+  "inventory": {
+    "cobraFile": 30,
+    "transparentFile": 100,
+    "folder": 80,
+    "staples": 1000
+  }
+}
