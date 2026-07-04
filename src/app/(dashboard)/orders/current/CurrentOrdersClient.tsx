@@ -11,6 +11,8 @@ const statusLabels: Record<string, string> = {
   ACCEPTED: "Accepted",
   PRINTING: "Printing",
   READY: "Ready for Pickup",
+  COLLECTED: "Collected",
+  CANCELLED: "Cancelled",
 };
 const statusDescriptions: Record<string, string> = {
   SUBMITTED: "Your document has been received",

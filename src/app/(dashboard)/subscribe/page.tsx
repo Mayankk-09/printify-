@@ -5,150 +5,199 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 
+const PACK_TYPE_LABELS: Record<string, string> = {
+  BW_ONLY: "B&W Only",
+  BW_AND_COLOR: "B&W & Color",
+};
+
 export default function SubscribePage() {
   const { data: session } = useSession();
   const router = useRouter();
-  const [plans, setPlans] = useState<any[]>([]);
-  const [subscription, setSubscription] = useState<any>(null);
-  const [selectedPlan, setSelectedPlan] = useState<any>(null);
+  const [packs, setPacks] = useState<any[]>([]);
+  const [balance, setBalance] = useState<any>(null);
+  const [userData, setUserData] = useState<any>(null);
+  const [selectedPack, setSelectedPack] = useState<any>(null);
+  const [claimingTrial, setClaimingTrial] = useState(false);
+  const [trialConfirm, setTrialConfirm] = useState(false);
   const [processing, setProcessing] = useState(false);
 
   useEffect(() => {
     fetch("/api/plans")
       .then((r) => r.json())
-      .then(setPlans);
+      .then(setPacks);
     fetch("/api/subscriptions/mine")
       .then((r) => r.json())
-      .then((d) => setSubscription(d.subscription))
+      .then(setBalance)
+      .catch(() => {});
+    fetch("/api/users/me")
+      .then((r) => r.json())
+      .then((d) => setUserData(d))
       .catch(() => {});
   }, []);
 
-  const currentRank = subscription?.plan?.displayOrder || 0;
-  const remainingPages = subscription
-    ? Math.max(0, subscription.pagesAllowed - subscription.pagesUsed)
-    : 0;
-  const hasActive = subscription?.status === "active";
-
-  const getPlanState = (plan: any) => {
-    if (!hasActive) return "UPGRADE PLAN";
-    if (currentRank === plan.displayOrder) return "CURRENT PLAN";
-    if (currentRank > plan.displayOrder) return "PLAN HISTORY";
-    return "UPGRADE PLAN";
-  };
-
-  const handleUpgrade = async () => {
-    if (!selectedPlan) return;
+  const handlePurchase = async () => {
+    if (!selectedPack) return;
     setProcessing(true);
     try {
       const res = await fetch("/api/subscriptions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ planId: selectedPlan.id }),
+        body: JSON.stringify({ packId: selectedPack.id }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Upgrade failed");
-      toast.success(`${selectedPlan.name} activated!`);
-      setSelectedPlan(null);
-      setSubscription(data.subscription);
-      router.push("/dashboard");
+      if (!res.ok) throw new Error(data.error || "Purchase failed");
+      toast.success(`${selectedPack.name} purchased!`);
+      setSelectedPack(null);
+      const updated = await fetch("/api/subscriptions/mine").then((r) => r.json());
+      setBalance(updated);
     } catch (err: any) {
-      toast.error(err.message || "Unable to upgrade plan");
+      toast.error(err.message || "Unable to purchase");
     } finally {
       setProcessing(false);
     }
   };
 
+  const handleClaimTrial = async () => {
+    setClaimingTrial(true);
+    try {
+      const res = await fetch("/api/trials/claim", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to claim trial");
+      setUserData((prev: any) => ({ ...prev, hasClaimedTrial: true, claimedTrialAt: new Date() }));
+      setTrialConfirm(true);
+    } catch (err: any) {
+      toast.error(err.message || "Unable to claim trial");
+    } finally {
+      setClaimingTrial(false);
+    }
+  };
+
+  const remaining = balance?.remainingPages ?? 0;
+  const hasClaimedTrial = userData?.hasClaimedTrial ?? false;
+  const hasUsedTrial = userData?.hasUsedTrial ?? false;
+  const canClaimTrial = !hasClaimedTrial && !hasUsedTrial;
+
   return (
-    <div className="sp fade-in">
-      <header className="sp-header">
+    <div className="pp fade-in">
+      <header className="pp-header">
         <div>
-          <span className="eyebrow">Membership</span>
-          <h1 className="page-title">Plans for student printing.</h1>
-          <p className="text-secondary">Upgrade anytime. New plans reset your monthly page pool.</p>
+          <span className="eyebrow">Page Packs</span>
+          <h1 className="page-title">Choose a page pack.</h1>
+          <p className="text-secondary">No expiry. No recurring charges. Pages are yours forever.</p>
         </div>
-        <div className="glass-card sp-status">
-          <span className="text-muted text-sm">Status</span>
-          <strong className="font-black" style={{ textTransform: "capitalize" }}>
-            {subscription?.status || "inactive"}
-          </strong>
-          <span className="text-muted text-sm">{remainingPages} pages remaining</span>
+        <div className="glass-card pp-balance">
+          <span className="text-muted text-sm">Your page balance</span>
+          <strong className="pp-balance-num">{remaining}</strong>
+          <span className="text-muted text-sm">pages remaining</span>
         </div>
       </header>
 
-      <section className="sp-grid">
-        {plans.map((plan) => {
-          const state = getPlanState(plan);
-          const isCurrent = state === "CURRENT PLAN";
-          const isHistory = state === "PLAN HISTORY";
+      {canClaimTrial && (
+        <section className="pp-trial">
+          <div className="glass-card pp-trial-card">
+            <div className="pp-trial-icon">🎉</div>
+            <div className="pp-trial-info">
+              <h2>Free Trial</h2>
+              <p className="text-secondary text-sm">
+                One free black-and-white print order of up to 5 pages. No payment needed.
+              </p>
+              <ul className="pp-trial-rules">
+                <li>Up to 5 pages</li>
+                <li>Black & white only</li>
+                <li>Single copy</li>
+                <li>One per lifetime</li>
+              </ul>
+            </div>
+            <button
+              className="btn btn-primary"
+              type="button"
+              onClick={handleClaimTrial}
+              disabled={claimingTrial}
+            >
+              {claimingTrial ? <div className="spinner" /> : "Claim Free Trial — ₹0"}
+            </button>
+          </div>
+        </section>
+      )}
 
-          let badgeColor = "var(--accent-cyan)";
-          let badgeBg = "rgba(34, 211, 238, 0.1)";
-          if (isCurrent) {
-            badgeColor = "var(--accent-green)";
-            badgeBg = "rgba(52, 211, 153, 0.1)";
-          }
-          if (isHistory) {
-            badgeColor = "var(--text-muted)";
-            badgeBg = "rgba(148, 163, 184, 0.08)";
-          }
+      {trialConfirm && (
+        <div className="modal-backdrop">
+          <div className="glass-card modal-card" style={{ maxWidth: 480, textAlign: "center" }}>
+            <div className="trial-confetti">🎉</div>
+            <h2 className="font-black" style={{ fontSize: "1.4rem", marginBottom: 12 }}>
+              Congratulations!
+            </h2>
+            <p className="text-secondary" style={{ lineHeight: 1.7, marginBottom: 20 }}>
+              You have successfully claimed your Free Trial.
+              <br /><br />
+              Your first Black &amp; White print order of up to 5 printable pages is completely free.
+            </p>
+            <button
+              className="btn btn-primary"
+              type="button"
+              onClick={() => { setTrialConfirm(false); router.push("/upload"); }}
+            >
+              Upload Document
+            </button>
+          </div>
+        </div>
+      )}
 
+      <section className="pp-grid">
+        {packs.map((pack) => {
+          const pricePerPage = pack.pages > 0 ? (pack.price / 100 / pack.pages).toFixed(2) : "0";
+          const isBestValue = pack.pages >= 150;
           return (
             <article
-              key={plan.id}
-              className={`glass-card sp-card ${isCurrent ? "active-glow" : ""}`}
+              key={pack.id}
+              className={`glass-card pp-card ${isBestValue ? "best-value" : ""}`}
             >
-              <span
-                className="sp-badge"
-                style={{
-                  color: badgeColor,
-                  background: badgeBg,
-                  borderColor: badgeColor + "33",
-                }}
-              >
-                {state}
-              </span>
-              <h2 className="sp-name">{plan.name}</h2>
-              {plan.description && (
-                <p className="sp-includes text-secondary">{plan.description}</p>
+              {isBestValue && (
+                <span className="pp-badge">Best Value</span>
               )}
-
-              <div className="sp-price">
+              <h2 className="pp-name">{pack.name}</h2>
+              {pack.description && (
+                <p className="pp-desc text-secondary">{pack.description}</p>
+              )}
+              <div className="pp-price">
                 <span className="text-muted">₹</span>
-                <strong>{plan.monthlyPrice}</strong>
-                <span className="text-muted">/month</span>
+                <strong>{(pack.price / 100).toFixed(2)}</strong>
               </div>
-
-              <div className="sp-quota">
-                <strong>{plan.pagesIncluded}</strong>
-                <span className="text-muted">monthly pages</span>
+              <div className="pp-pages">
+                <strong>{pack.pages}</strong>
+                <span className="text-muted">pages</span>
               </div>
-
+              <div className="pp-per-page">
+                ₹{pricePerPage} per page
+              </div>
+              <div className="pp-print-mode">
+                {PACK_TYPE_LABELS[pack.packType] || "B&W & Color"}
+              </div>
               <button
-                className={`btn w-100 ${isCurrent || isHistory ? "btn-secondary" : "btn-primary"}`}
+                className="btn btn-primary w-100"
                 type="button"
-                disabled={isCurrent || isHistory}
-                onClick={() => setSelectedPlan(plan)}
+                onClick={() => setSelectedPack(pack)}
               >
-                {isCurrent ? "Current plan" : isHistory ? "Past plan" : "Upgrade"}
+                Buy Now
               </button>
             </article>
           );
         })}
       </section>
 
-      {selectedPlan && (
+      {selectedPack && (
         <div className="modal-backdrop">
           <div className="glass-card modal-card">
             <div className="flex-between" style={{ marginBottom: 16 }}>
               <div>
-                <span className="eyebrow">Confirm upgrade</span>
+                <span className="eyebrow">Confirm purchase</span>
                 <h2 className="font-black" style={{ marginTop: 4, fontSize: "1.15rem" }}>
-                  {selectedPlan.name}
+                  {selectedPack.name}
                 </h2>
               </div>
               <button
                 className="btn btn-ghost"
-                onClick={() => setSelectedPlan(null)}
+                onClick={() => setSelectedPack(null)}
                 type="button"
                 style={{ width: 32, height: 32, padding: 0, fontSize: "1.1rem" }}
               >
@@ -156,43 +205,41 @@ export default function SubscribePage() {
               </button>
             </div>
 
-            <div className="sp-modal-preview">
-              {hasActive && (
-                <div>
-                  <span className="text-muted text-sm">Current remaining</span>
-                  <strong>{remainingPages}</strong>
-                </div>
-              )}
+            <div className="pp-modal-preview">
               <div>
-                <span className="text-muted text-sm">New balance</span>
-                <strong>{selectedPlan.pagesIncluded}</strong>
+                <span className="text-muted text-sm">Pages</span>
+                <strong>{selectedPack.pages}</strong>
               </div>
               <div>
-                <span className="text-muted text-sm">Total</span>
-                <strong>₹{selectedPlan.monthlyPrice}</strong>
+                <span className="text-muted text-sm">Price</span>
+                <strong>₹{(selectedPack.price / 100).toFixed(2)}</strong>
+              </div>
+              <div>
+                <span className="text-muted text-sm">Print mode</span>
+                <strong>{PACK_TYPE_LABELS[selectedPack.packType] || "B&W & Color"}</strong>
               </div>
             </div>
 
             <p className="text-secondary text-sm" style={{ lineHeight: 1.5 }}>
-              Your plan changes immediately. The monthly page balance resets to the selected
-              plan&apos;s allowance. {hasActive && "Previous plan details will be preserved."}
+              Pages never expire. Use them anytime for any print job.
+              {remaining > 0 && ` You already have ${remaining} pages remaining — this will be added on top.`}
             </p>
 
             <div className="flex gap-3" style={{ justifyContent: "flex-end", marginTop: 16 }}>
               <button
                 className="btn btn-secondary"
                 type="button"
-                onClick={() => setSelectedPlan(null)}
+                onClick={() => setSelectedPack(null)}
               >
                 Cancel
               </button>
               <button
                 className="btn btn-primary"
                 type="button"
-                onClick={handleUpgrade}
+                onClick={handlePurchase}
                 disabled={processing}
               >
-                {processing ? <div className="spinner" /> : `Pay ₹${selectedPlan.monthlyPrice}`}
+                {processing ? <div className="spinner" /> : `Pay ₹${(selectedPack.price / 100).toFixed(2)}`}
               </button>
             </div>
           </div>
@@ -200,27 +247,38 @@ export default function SubscribePage() {
       )}
 
       <style>{`
-        .sp { display: flex; flex-direction: column; gap: 16px; }
-        .sp-header { display: flex; justify-content: space-between; gap: 16px; align-items: stretch; }
-        .sp-header p { margin-top: 4px; }
-        .sp-status { min-width: 200px; display: flex; flex-direction: column; gap: 4px; justify-content: center; }
-        .sp-status strong { font-size: 1.25rem; }
-        .sp-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
-        .sp-card { position: relative; display: flex; flex-direction: column; gap: 12px; overflow: hidden; }
-        .sp-badge { align-self: flex-start; border-radius: 999px; border: 1px solid; padding: 5px 10px; font-size: 0.68rem; font-weight: 800; }
-        .sp-name { font-size: 1.25rem; font-weight: 800; }
-        .sp-includes { font-size: 0.85rem; }
-        .sp-price { display: flex; align-items: baseline; gap: 3px; }
-        .sp-price strong { font-size: 2.4rem; line-height: 1; font-weight: 800; }
-        .sp-price span { font-size: 0.85rem; font-weight: 600; }
-        .sp-quota { border: 1px solid var(--border-glass); border-radius: 12px; background: rgba(255,255,255,0.04); padding: 12px; display: flex; justify-content: space-between; align-items: center; }
-        .sp-quota strong { font-size: 1.3rem; }
-        .sp-quota span { font-size: 0.8rem; font-weight: 600; }
-        .sp-modal-preview { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px; }
-        .sp-modal-preview div { border: 1px solid var(--border-glass); border-radius: 12px; background: rgba(255,255,255,0.04); padding: 12px; display: flex; flex-direction: column; gap: 4px; }
-        .sp-modal-preview strong { font-size: 1.2rem; }
-        @media (max-width: 900px) { .sp-header, .sp-grid { grid-template-columns: 1fr; } .sp-header { flex-direction: column; } }
-        @media (max-width: 640px) { .sp-modal-preview { grid-template-columns: 1fr; } }
+        .pp { display: flex; flex-direction: column; gap: 16px; }
+        .pp-header { display: flex; justify-content: space-between; gap: 16px; align-items: stretch; }
+        .pp-header p { margin-top: 4px; }
+        .pp-balance { min-width: 200px; display: flex; flex-direction: column; gap: 4px; justify-content: center; align-items: center; }
+        .pp-balance-num { font-size: 2.2rem; line-height: 1; font-weight: 800; }
+        .pp-trial-card { display: flex; align-items: center; gap: 16px; border-color: rgba(34,211,238,0.2); background: rgba(34,211,238,0.04); }
+        .pp-trial-info { flex: 1; }
+        .pp-trial-info h2 { font-size: 1rem; font-weight: 800; }
+        .pp-trial-icon { font-size: 2rem; flex-shrink: 0; }
+        .pp-trial-rules { list-style: none; padding: 0; margin: 8px 0 0; display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 0.78rem; color: var(--text-secondary); }
+        .pp-trial-rules li::before { content: "•"; margin-right: 4px; color: var(--accent-cyan); }
+        .pp-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+        .pp-card { position: relative; display: flex; flex-direction: column; gap: 10px; overflow: hidden; }
+        .pp-card.best-value { border-color: rgba(251,191,36,0.3); background: rgba(251,191,36,0.04); }
+        .pp-badge { position: absolute; top: 12px; right: 12px; background: linear-gradient(135deg, #f59e0b, #fbbf24); color: #000; border-radius: 999px; padding: 4px 10px; font-size: 0.65rem; font-weight: 800; }
+        .pp-name { font-size: 1.25rem; font-weight: 800; padding-right: 80px; }
+        .pp-desc { font-size: 0.85rem; }
+        .pp-price { display: flex; align-items: baseline; gap: 3px; }
+        .pp-price strong { font-size: 2.4rem; line-height: 1; font-weight: 800; }
+        .pp-price span { font-size: 0.85rem; font-weight: 600; }
+        .pp-pages { border: 1px solid var(--border-glass); border-radius: 12px; background: rgba(255,255,255,0.04); padding: 12px; display: flex; justify-content: space-between; align-items: center; }
+        .pp-pages strong { font-size: 1.3rem; }
+        .pp-pages span { font-size: 0.8rem; font-weight: 600; }
+        .pp-per-page { font-size: 0.78rem; color: var(--text-muted); font-weight: 600; text-align: center; }
+        .pp-print-mode { font-size: 0.75rem; color: var(--text-muted); font-weight: 600; text-align: center; border-top: 1px solid var(--border-glass); padding-top: 6px; }
+        .pp-modal-preview { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px; }
+        .pp-modal-preview div { border: 1px solid var(--border-glass); border-radius: 12px; background: rgba(255,255,255,0.04); padding: 12px; display: flex; flex-direction: column; gap: 4px; }
+        .pp-modal-preview strong { font-size: 1.2rem; }
+        .trial-confetti { font-size: 4rem; margin-bottom: 12px; animation: bounce 0.5s ease; }
+        @keyframes bounce { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.2); } }
+        @media (max-width: 900px) { .pp-header, .pp-grid { grid-template-columns: 1fr; } .pp-header { flex-direction: column; } }
+        @media (max-width: 640px) { .pp-modal-preview { grid-template-columns: 1fr; } }
       `}</style>
     </div>
   );

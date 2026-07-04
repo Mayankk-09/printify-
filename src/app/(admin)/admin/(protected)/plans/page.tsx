@@ -3,18 +3,22 @@
 import { useState, useEffect } from "react";
 import toast from "react-hot-toast";
 
-export default function AdminPlansPage() {
-  const [plans, setPlans] = useState<any[]>([]);
-  const [editingPlan, setEditingPlan] = useState<any>(null);
+const PACK_TYPES = [
+  { value: "BW_ONLY", label: "Black & White Only" },
+  { value: "BW_AND_COLOR", label: "Black & White + Color" },
+];
+
+export default function AdminPacksPage() {
+  const [packs, setPacks] = useState<any[]>([]);
+  const [editingPack, setEditingPack] = useState<any>(null);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({
     name: "",
     slug: "",
     description: "",
-    monthlyPrice: "",
-    pagesIncluded: "",
-    supportsColor: false,
-    validityDays: "",
+    price: "",
+    pages: "",
+    packType: "BW_AND_COLOR",
     active: true,
     displayOrder: "",
   });
@@ -22,7 +26,7 @@ export default function AdminPlansPage() {
   useEffect(() => {
     fetch("/api/plans")
       .then((r) => r.json())
-      .then(setPlans);
+      .then(setPacks);
   }, []);
 
   const resetForm = () => {
@@ -30,66 +34,63 @@ export default function AdminPlansPage() {
       name: "",
       slug: "",
       description: "",
-      monthlyPrice: "",
-      pagesIncluded: "",
-      supportsColor: false,
-      validityDays: "",
+      price: "",
+      pages: "",
+      packType: "BW_AND_COLOR",
       active: true,
       displayOrder: "",
     });
-    setEditingPlan(null);
+    setEditingPack(null);
   };
 
-  const openEdit = (plan: any) => {
+  const openEdit = (pack: any) => {
     setForm({
-      name: plan.name,
-      slug: plan.slug,
-      description: plan.description || "",
-      monthlyPrice: String(plan.monthlyPrice),
-      pagesIncluded: String(plan.pagesIncluded),
-      supportsColor: plan.supportsColor,
-      validityDays: String(plan.validityDays),
-      active: plan.active,
-      displayOrder: String(plan.displayOrder),
+      name: pack.name,
+      slug: pack.slug,
+      description: pack.description || "",
+      price: String(pack.price),
+      pages: String(pack.pages),
+      packType: pack.packType,
+      active: pack.active,
+      displayOrder: String(pack.displayOrder),
     });
-    setEditingPlan(plan);
+    setEditingPack(pack);
     setShowForm(true);
   };
 
   const handleSave = async () => {
     try {
-      const url = editingPlan ? `/api/plans/${editingPlan.id}` : "/api/plans";
-      const method = editingPlan ? "PUT" : "POST";
+      const url = editingPack ? `/api/plans/${editingPack.id}` : "/api/plans";
+      const method = editingPack ? "PUT" : "POST";
       const res = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...form,
-          monthlyPrice: Number(form.monthlyPrice),
-          pagesIncluded: Number(form.pagesIncluded),
-          validityDays: Number(form.validityDays),
+          price: Number(form.price),
+          pages: Number(form.pages),
           displayOrder: Number(form.displayOrder),
         }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to save plan");
-      toast.success(editingPlan ? "Plan updated" : "Plan created");
+      if (!res.ok) throw new Error(typeof data.error === "string" ? data.error : "Failed to save pack");
+      toast.success(editingPack ? "Pack updated" : "Pack created");
       setShowForm(false);
       resetForm();
       const updated = await fetch("/api/plans").then((r) => r.json());
-      setPlans(updated);
+      setPacks(updated);
     } catch (err: any) {
       toast.error(err.message);
     }
   };
 
-  const handleDelete = async (plan: any) => {
-    if (!confirm(`Delete "${plan.name}"?`)) return;
+  const handleDelete = async (pack: any) => {
+    if (!confirm(`Delete "${pack.name}"? This will remove all associated subscriptions.`)) return;
     try {
-      const res = await fetch(`/api/plans/${plan.id}`, { method: "DELETE" });
+      const res = await fetch(`/api/plans/${pack.id}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Delete failed");
-      toast.success("Plan deleted");
-      setPlans((prev) => prev.filter((p) => p.id !== plan.id));
+      toast.success("Pack deleted");
+      setPacks((prev) => prev.filter((p) => p.id !== pack.id));
     } catch (err: any) {
       toast.error(err.message);
     }
@@ -99,43 +100,51 @@ export default function AdminPlansPage() {
     <div>
       <div className="flex-between" style={{ marginBottom: 24 }}>
         <div>
-          <span className="eyebrow">Plans</span>
-          <h1 className="page-title">Subscription plans</h1>
+          <span className="eyebrow">Packs &amp; Add-ons</span>
+          <h1 className="page-title">Manage page packs</h1>
         </div>
         <button className="btn btn-primary" onClick={() => { resetForm(); setShowForm(true); }} type="button">
-          + New plan
+          + New pack
         </button>
       </div>
 
       <div className="plans-grid">
-        {plans.map((plan) => (
-          <div key={plan.id} className={`glass-card plan-card ${!plan.active ? "inactive" : ""}`}>
+        {packs.map((pack) => (
+          <div key={pack.id} className={`glass-card plan-card ${!pack.active ? "inactive" : ""}`}>
             <div className="plan-card-header">
-              <h2>{plan.name}</h2>
-              <span className={`status-badge ${plan.active ? "status-READY" : "status-SUBMITTED"}`}>
-                {plan.active ? "Active" : "Inactive"}
+              <h2>{pack.name}</h2>
+              <span className={`status-badge ${pack.active ? "status-READY" : "status-SUBMITTED"}`}>
+                {pack.active ? "Active" : "Inactive"}
               </span>
             </div>
-            <div className="plan-price">₹{plan.monthlyPrice}<span>/month</span></div>
-            <div className="plan-pages">{plan.pagesIncluded} pages</div>
-            {plan.description && <p className="text-secondary text-sm">{plan.description}</p>}
+            <div className="plan-price">₹{(pack.price / 100).toFixed(2)}</div>
+            <div className="plan-pages">{pack.pages} pages</div>
+            <div className="plan-type-badge">
+              {pack.packType === "BW_ONLY" ? "B&W Only" : "B&W + Color"}
+            </div>
+            {pack.description && <p className="text-secondary text-sm">{pack.description}</p>}
             <div className="plan-features">
-              <span>{plan.supportsColor ? "✓ Color supported" : "✗ B&W only"}</span>
-              <span>{plan.validityDays} days validity</span>
+              <span>₹{(pack.price / 100 / pack.pages).toFixed(2)} per page</span>
+              <span>No expiry</span>
             </div>
             <div className="plan-actions" style={{ marginTop: "auto", display: "flex", gap: 8 }}>
-              <button className="btn btn-secondary w-100" onClick={() => openEdit(plan)} type="button">Edit</button>
-              <button className="btn btn-secondary w-100" onClick={() => handleDelete(plan)} type="button" style={{ color: "var(--accent-red)" }}>Delete</button>
+              <button className="btn btn-secondary w-100" onClick={() => openEdit(pack)} type="button">Edit</button>
+              <button className="btn btn-secondary w-100" onClick={() => handleDelete(pack)} type="button" style={{ color: "var(--accent-red)" }}>Delete</button>
             </div>
           </div>
         ))}
+        {!packs.length && (
+          <div className="glass-card" style={{ gridColumn: "1 / -1", padding: 40, textAlign: "center" }}>
+            <p className="text-secondary">No packs yet. Create your first pack.</p>
+          </div>
+        )}
       </div>
 
       {showForm && (
         <div className="modal-backdrop">
           <div className="glass-card modal-card">
             <div className="flex-between" style={{ marginBottom: 16 }}>
-              <h2 className="font-black">{editingPlan ? "Edit plan" : "New plan"}</h2>
+              <h2 className="font-black">{editingPack ? "Edit pack" : "New pack"}</h2>
               <button className="btn btn-ghost" onClick={() => setShowForm(false)} type="button">✕</button>
             </div>
 
@@ -153,37 +162,35 @@ export default function AdminPlansPage() {
             </div>
             <div className="form-row grid-cols-2 gap-3">
               <div className="form-group">
-                <label className="form-label">Price (₹/month)</label>
-                <input className="form-input" type="number" value={form.monthlyPrice} onChange={(e) => setForm({ ...form, monthlyPrice: e.target.value })} />
+                <label className="form-label">Price (in paise, e.g., 24900 = ₹249)</label>
+                <input className="form-input" type="number" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} />
               </div>
               <div className="form-group">
-                <label className="form-label">Pages included</label>
-                <input className="form-input" type="number" value={form.pagesIncluded} onChange={(e) => setForm({ ...form, pagesIncluded: e.target.value })} />
+                <label className="form-label">Pages</label>
+                <input className="form-input" type="number" value={form.pages} onChange={(e) => setForm({ ...form, pages: e.target.value })} />
               </div>
             </div>
+            <div className="form-group">
+              <label className="form-label">Print Type</label>
+              <select className="form-input" value={form.packType} onChange={(e) => setForm({ ...form, packType: e.target.value })}>
+                {PACK_TYPES.map((t) => (
+                  <option key={t.value} value={t.value}>{t.label}</option>
+                ))}
+              </select>
+            </div>
             <div className="form-row grid-cols-2 gap-3">
-              <div className="form-group">
-                <label className="form-label">Validity (days)</label>
-                <input className="form-input" type="number" value={form.validityDays} onChange={(e) => setForm({ ...form, validityDays: e.target.value })} />
-              </div>
               <div className="form-group">
                 <label className="form-label">Display order</label>
                 <input className="form-input" type="number" value={form.displayOrder} onChange={(e) => setForm({ ...form, displayOrder: e.target.value })} />
               </div>
-            </div>
-            <div className="form-row grid-cols-2 gap-3" style={{ marginBottom: 14 }}>
-              <label className="flex items-center gap-2" style={{ cursor: "pointer" }}>
-                <input type="checkbox" checked={form.supportsColor} onChange={(e) => setForm({ ...form, supportsColor: e.target.checked })} />
-                <span className="text-sm">Supports color</span>
-              </label>
-              <label className="flex items-center gap-2" style={{ cursor: "pointer" }}>
+              <label className="flex items-center gap-2" style={{ cursor: "pointer", marginBottom: 14, marginTop: 24 }}>
                 <input type="checkbox" checked={form.active} onChange={(e) => setForm({ ...form, active: e.target.checked })} />
                 <span className="text-sm">Active</span>
               </label>
             </div>
 
             <button className="btn btn-primary w-100" onClick={handleSave} type="button">
-              {editingPlan ? "Update plan" : "Create plan"}
+              {editingPack ? "Update pack" : "Create pack"}
             </button>
           </div>
         </div>
@@ -196,8 +203,8 @@ export default function AdminPlansPage() {
         .plan-card-header { display: flex; justify-content: space-between; align-items: flex-start; }
         .plan-card-header h2 { font-size: 1.1rem; font-weight: 800; }
         .plan-price { font-size: 2rem; font-weight: 800; }
-        .plan-price span { font-size: 0.9rem; color: var(--text-muted); font-weight: 600; }
         .plan-pages { font-size: 1rem; color: var(--accent-cyan); font-weight: 700; }
+        .plan-type-badge { display: inline-flex; padding: 4px 10px; border-radius: 999px; font-size: 0.75rem; font-weight: 700; background: rgba(139,92,246,0.12); color: var(--primary-indigo); width: fit-content; }
         .plan-features { display: flex; flex-direction: column; gap: 4px; font-size: 0.85rem; color: var(--text-secondary); }
         @media (max-width: 860px) { .plans-grid { grid-template-columns: 1fr; } }
       `}</style>

@@ -1,339 +1,253 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
-import { useSession } from "next-auth/react";
-import { getSlotLabel } from "@/lib/slots";
+import { useRouter } from "next/navigation";
+import { formatDateFull } from "@/lib/pickup";
 
-const statusSteps = ["SUBMITTED", "ACCEPTED", "PRINTING", "READY", "COLLECTED"];
-const statusLabels: Record<string, string> = {
-  SUBMITTED: "Submitted",
-  ACCEPTED: "Accepted",
-  PRINTING: "Printing",
-  READY: "Ready for Pickup",
-  COLLECTED: "Collected",
+const TIMELINE_STAGES = [
+  { key: "SUBMITTED", label: "Submitted", icon: "📄" },
+  { key: "ACCEPTED", label: "Accepted", icon: "✅" },
+  { key: "PRINTING", label: "Printing", icon: "🖨️" },
+  { key: "READY", label: "Ready", icon: "📦" },
+  { key: "COLLECTED", label: "Collected", icon: "✓" },
+];
+
+const STATUS_ORDER: Record<string, number> = {
+  SUBMITTED: 0,
+  ACCEPTED: 1,
+  PRINTING: 2,
+  READY: 3,
+  COLLECTED: 4,
 };
-const statusDescriptions: Record<string, string> = {
-  SUBMITTED: "Your document has been received",
-  ACCEPTED: "Your order has been reviewed and accepted",
-  PRINTING: "Your document is being printed",
-  READY: "Ready for pickup at the print room",
-  COLLECTED: "Order collected successfully",
-};
-
-function formatDate(d: Date | string | null | undefined): string {
-  if (!d) return "—";
-  return new Date(d).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
-}
-
-function formatTime(d: Date | string | null | undefined): string {
-  if (!d) return "";
-  return new Date(d).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
-}
-
-function getPickupCode(order: any): string {
-  if (order.pickupCode?.code) return order.pickupCode.code;
-  return `P-${order.orderNumber?.slice(-4) || "0000"}`;
-}
-
-function getStatusIndex(status: string): number {
-  return statusSteps.indexOf(status);
-}
-
-function getStatusTimestamp(order: any, status: string): Date | null {
-  switch (status) {
-    case "SUBMITTED": return order.submittedAt || order.createdAt;
-    case "ACCEPTED": return order.acceptedAt || null;
-    case "PRINTING": return order.printingAt || null;
-    case "READY": return order.readyAt || null;
-    case "COLLECTED": return order.collectedAt || null;
-    default: return null;
-  }
-}
 
 export default function StudentDashboardClient({
   user,
-  subscription,
+  subscriptions,
+  totalAllowed,
+  totalUsed,
+  remainingPages,
   activeOrder,
+  hasTrial,
 }: {
   user: any;
-  subscription: any;
-  activeOrder: any | null;
+  subscriptions: any[];
+  totalAllowed: number;
+  totalUsed: number;
+  remainingPages: number;
+  activeOrder: any;
+  hasTrial: boolean;
 }) {
-  const { data: session } = useSession();
-  const [orders] = useState(activeOrder ? [activeOrder] : []);
-
-  const totalPages = subscription?.pagesAllowed || 0;
-  const usedPages = subscription?.pagesUsed || 0;
-  const remainingPages = Math.max(0, totalPages - usedPages);
-  const usagePercent = totalPages ? Math.min(100, Math.round((usedPages / totalPages) * 100)) : 0;
-
-  const currentOrder = orders[0] || null;
-  const currentStatusIndex = currentOrder ? getStatusIndex(currentOrder.status) : -1;
-
-  const hasSubscription = subscription?.status === "active";
+  const router = useRouter();
+  const usagePercent = totalAllowed > 0 ? (totalUsed / totalAllowed) * 100 : 0;
+  const currentStage = activeOrder ? STATUS_ORDER[activeOrder.status] ?? -1 : -1;
+  const pickupCode = activeOrder?.pickupCode?.code;
 
   return (
     <div className="sd fade-in">
-      <section className="sd-hero glass-card">
-        <div className="sd-hero-copy">
-          <span className="eyebrow">Dashboard</span>
-          <h1>Hey, {user.name?.split(" ")[0] || "Student"}</h1>
-          <p className="text-secondary">
-            {hasSubscription
-              ? `${remainingPages} pages remaining on your ${subscription.plan?.name || "current"} plan`
-              : "No active plan. Pay per print."}
-          </p>
-          <Link href="/upload" className="btn btn-primary">
-            ↑ Upload document
-          </Link>
+      <section className="glass-card sd-hero">
+        <div className="sd-hero-content">
+          <div className="sd-avatar">{user.name?.charAt(0)?.toUpperCase() || "S"}</div>
+          <div>
+            <span className="eyebrow">Welcome back</span>
+            <h1 className="page-title" style={{ margin: 0 }}>{user.name}</h1>
+            {user.phone && <p className="text-secondary text-sm">{user.phone}</p>}
+          </div>
         </div>
-        <div className="sd-hero-metrics">
-          {[
-            [remainingPages, "Remaining pages"],
-            [hasSubscription ? subscription?.plan?.name || "Plan" : "Pay per print", "Current plan"],
-            [currentOrder ? getSlotLabel(currentOrder.pickupSlot) || "—" : "—", "Next pickup"],
-            [currentOrder ? "1" : "0", "Active jobs"],
-          ].map(([val, label]) => (
-            <div key={label} className="sd-hero-metric">
-              <span className="sd-hero-val">{val}</span>
-              <span className="sd-hero-label">{label}</span>
-            </div>
-          ))}
+        <div className="sd-hero-stats">
+          <div className="sd-stat">
+            <strong>{remainingPages}</strong>
+            <span>Pages left</span>
+          </div>
+          <div className="sd-stat">
+            <strong>{subscriptions.length}</strong>
+            <span>Pack{subscriptions.length !== 1 ? "s" : ""}</span>
+          </div>
+          <div className="sd-stat">
+            <strong>{activeOrder ? 1 : 0}</strong>
+            <span>Active job</span>
+          </div>
         </div>
       </section>
 
-      <div className="sd-main-grid">
-        <div className={`glass-card sd-sub ${hasSubscription ? "active-glow" : ""}`}>
-          <div className="sd-sub-head">
-            <div>
-              <span className="eyebrow">Subscription</span>
-              <h2>{hasSubscription ? subscription?.plan?.name : "No active plan"}</h2>
-            </div>
-            <span className={`status-badge ${hasSubscription ? "status-READY" : "status-SUBMITTED"}`}>
-              {hasSubscription ? "active" : "inactive"}
-            </span>
+      <div className="sd-grid">
+        <section className="glass-card sd-balance">
+          <h2 className="sd-section-title">Page Balance</h2>
+          <div className="sd-balance-ring">
+            <svg viewBox="0 0 120 120" className="sd-ring-svg">
+              <circle cx="60" cy="60" r="52" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="8" />
+              <circle
+                cx="60" cy="60" r="52"
+                fill="none"
+                stroke="var(--primary-indigo)"
+                strokeWidth="8"
+                strokeLinecap="round"
+                strokeDasharray={`${2 * Math.PI * 52}`}
+                strokeDashoffset={`${2 * Math.PI * 52 * (1 - usagePercent / 100)}`}
+                transform="rotate(-90, 60, 60)"
+                style={{ transition: "stroke-dashoffset 0.5s ease" }}
+              />
+              <text x="60" y="56" textAnchor="middle" fill="var(--text-primary)" fontSize="1.8rem" fontWeight="800">
+                {remainingPages}
+              </text>
+              <text x="60" y="76" textAnchor="middle" fill="var(--text-muted)" fontSize="0.6rem">
+                remaining
+              </text>
+            </svg>
           </div>
-          {hasSubscription ? (
-            <>
-              <div className="sd-sub-ring" style={{ "--usage": `${usagePercent}%` } as React.CSSProperties}>
-                <div className="sd-sub-ring-inner">
-                  <strong>{remainingPages}</strong>
-                  <span>left</span>
-                </div>
-              </div>
-              <div className="sd-sub-info">
-                <div className="progress-bar">
-                  <div className="progress-bar-fill" style={{ width: `${usagePercent}%` }} />
-                </div>
-                <p>{usedPages} of {totalPages} pages used</p>
-                <p className="text-muted text-sm">Expires {formatDate(subscription.expiryDate)}</p>
-              </div>
-            </>
-          ) : (
-            <div className="empty-state compact" style={{ margin: "12px 0" }}>
-              <p>Pay per page — no subscription needed</p>
+          <div className="sd-balance-bar">
+            <div className="sd-balance-track">
+              <div className="sd-balance-fill" style={{ width: `${Math.min(usagePercent, 100)}%` }} />
             </div>
-          )}
-          <Link href="/subscribe" className="btn btn-secondary w-100">
-            {hasSubscription ? "Change plan" : "Choose plan"}
+            <span className="text-muted text-sm">{totalUsed} / {totalAllowed} pages used</span>
+          </div>
+          <Link href="/upload" className="btn btn-primary w-100" style={{ marginTop: 12 }}>
+            Upload Document
           </Link>
-        </div>
+        </section>
 
-        <div className="glass-card sd-active-order">
-          <div className="sd-section-head">
-            <h2>Current Active Order</h2>
-          </div>
-          {currentOrder ? (
-            <>
-              <div className="sd-active-order-details">
-                <div className="sd-aod-row">
-                  <span>File</span>
-                  <strong>{currentOrder.fileName}</strong>
-                </div>
-                <div className="sd-aod-row">
-                  <span>Pages</span>
-                  <strong>{currentOrder.pages}</strong>
-                </div>
-                <div className="sd-aod-row">
-                  <span>Copies</span>
-                  <strong>{currentOrder.copies}</strong>
-                </div>
-                <div className="sd-aod-row">
-                  <span>Print type</span>
-                  <strong>{currentOrder.printMode === "COLOR" ? "Color" : "B&W"} / {currentOrder.printSide === "DOUBLE" ? "Double" : "Single"}</strong>
-                </div>
-                <div className="sd-aod-row">
-                  <span>Status</span>
-                  <span className={`status-badge status-${currentOrder.status}`}>
-                    {statusLabels[currentOrder.status] || currentOrder.status}
-                  </span>
-                </div>
-                {currentOrder.pickupSlot && (
-                  <div className="sd-aod-row">
-                    <span>Pickup slot</span>
-                    <strong>{getSlotLabel(currentOrder.pickupSlot)}</strong>
-                  </div>
-                )}
-              </div>
-              {currentOrder.status === "READY" && (
-                <div className="sd-pickup-code-section">
-                  <span className="eyebrow">PICKUP CODE</span>
-                  <strong className="sd-pickup-code-large">{getPickupCode(currentOrder)}</strong>
-                </div>
-              )}
-              <Link href="/orders/current" className="btn btn-secondary w-100" style={{ marginTop: 8 }}>
-                View All Orders →
-              </Link>
-            </>
-          ) : (
-            <div className="empty-state">
-              <div className="empty-state-icon">📄</div>
-              <h3>No active print jobs</h3>
-              <p>Upload a document to start a new print order.</p>
-              <Link href="/upload" className="btn btn-primary">
-                Upload document
+        {activeOrder ? (
+          <section className="glass-card sd-order">
+            <div className="flex-between" style={{ marginBottom: 16 }}>
+              <h2 className="sd-section-title">Current Order</h2>
+              <Link href="/orders/current" className="text-sm" style={{ color: "var(--primary-indigo)" }}>
+                View details
               </Link>
             </div>
-          )}
-        </div>
-      </div>
 
-      <section className="sd-tracking-section">
-        <div className="sd-tracking glass-card">
-          <div className="sd-section-head">
-            <h2>Track Your Document</h2>
-          </div>
-          {currentOrder ? (
+            <div className="sd-order-info">
+              <div className="sd-order-file">
+                <span className="text-muted text-sm">Document</span>
+                <strong>{activeOrder.fileName}</strong>
+              </div>
+              <div className="sd-order-meta">
+                <div>
+                  <span className="text-muted text-sm">Pages</span>
+                  <strong>{activeOrder.pages} × {activeOrder.copies}</strong>
+                </div>
+                <div>
+                  <span className="text-muted text-sm">Mode</span>
+                  <strong>{activeOrder.printMode === "BW" ? "B&W" : "Color"}</strong>
+                </div>
+                <div>
+                  <span className="text-muted text-sm">Order #</span>
+                  <strong>{activeOrder.orderNumber}</strong>
+                </div>
+              </div>
+            </div>
+
+            {pickupCode && (
+              <div className="sd-pickup-code">
+                <span className="text-muted text-sm">Pickup Code</span>
+                <strong className="sd-pickup-value">{pickupCode}</strong>
+              </div>
+            )}
+
             <div className="sd-timeline">
-              {statusSteps.map((step, i) => {
-                const isCompleted = i < currentStatusIndex;
-                const isCurrent = i === currentStatusIndex;
-                const isFuture = i > currentStatusIndex;
-                const timestamp = getStatusTimestamp(currentOrder, step);
-
+              {TIMELINE_STAGES.map((stage, i) => {
+                const isActive = i <= currentStage;
+                const isCurrent = i === currentStage;
+                const isLast = i === TIMELINE_STAGES.length - 1;
                 return (
-                  <div key={step} className={`sd-tl-step ${isCompleted ? "completed" : ""} ${isCurrent ? "current" : ""} ${isFuture ? "future" : ""}`}>
-                    <div className="sd-tl-line">
-                      <div className={`sd-tl-dot ${isCompleted ? "dot-completed" : ""} ${isCurrent ? "dot-current" : ""} ${isFuture ? "dot-future" : ""}`}>
-                        {isCompleted ? "✓" : isCurrent ? "●" : "○"}
-                      </div>
-                      {i < statusSteps.length - 1 && <div className={`sd-tl-connector ${isCompleted ? "connector-done" : ""}`} />}
+                  <div key={stage.key} className={`sd-timeline-step ${isActive ? "active" : ""} ${isCurrent ? "current" : ""}`}>
+                    <div className="sd-timeline-node">
+                      <div className="sd-timeline-dot" />
+                      {!isLast && <div className="sd-timeline-line" />}
                     </div>
-                    <div className="sd-tl-content">
-                      <strong>{statusLabels[step]}</strong>
-                      <p>{statusDescriptions[step]}</p>
-                      {timestamp && (
-                        <span className="sd-tl-time">{formatDate(timestamp)} at {formatTime(timestamp)}</span>
-                      )}
+                    <div className="sd-timeline-content">
+                      <span className="sd-timeline-icon">{stage.icon}</span>
+                      <span className="sd-timeline-label">{stage.label}</span>
                     </div>
                   </div>
                 );
               })}
             </div>
-          ) : (
-            <div className="empty-state compact">
-              <p>No active orders to track. Upload a document to get started.</p>
-            </div>
-          )}
-        </div>
-
-        <div className="glass-card sd-actions">
-          <div className="sd-section-head">
-            <h2>Student Actions</h2>
-          </div>
-          <div className="sd-actions-grid">
-            {[
-              ["↑ Upload Document", "Start a new print job", "/upload"],
-              ["○ Current Orders", "View active print orders", "/orders/current"],
-              ["◎ Order History", "View past orders", "/orders/history"],
-              ["◉ Manage Subscription", "Change or renew plan", "/subscribe"],
-              ["? Support", "Contact print room", "/dashboard"],
-            ].map(([title, desc, href]) => (
-              <Link key={title} href={href} className="sd-action-btn">
-                <strong>{title}</strong>
-                <span>{desc}</span>
+          </section>
+        ) : (
+          <section className="glass-card sd-no-order">
+            <div className="sd-no-order-content">
+              <span style={{ fontSize: "3rem" }}>📄</span>
+              <h2>No active orders</h2>
+              <p className="text-secondary text-sm">Upload a document to get started.</p>
+              <Link href="/upload" className="btn btn-primary">
+                Upload Document
               </Link>
-            ))}
-          </div>
-        </div>
+            </div>
+          </section>
+        )}
+      </div>
+
+      <section className="sd-actions">
+        <Link href="/upload" className="glass-card sd-action-card">
+          <span className="sd-action-icon">📤</span>
+          <h3>Upload</h3>
+          <p className="text-secondary text-sm">Submit a print job</p>
+        </Link>
+        <Link href="/subscribe" className="glass-card sd-action-card">
+          <span className="sd-action-icon">📦</span>
+          <h3>Buy Packs</h3>
+          <p className="text-secondary text-sm">Purchase page packs</p>
+        </Link>
+        <Link href="/orders/current" className="glass-card sd-action-card">
+          <span className="sd-action-icon">📋</span>
+          <h3>Current Orders</h3>
+          <p className="text-secondary text-sm">Track active orders</p>
+        </Link>
+        <Link href="/orders/history" className="glass-card sd-action-card">
+          <span className="sd-action-icon">📜</span>
+          <h3>Order History</h3>
+          <p className="text-secondary text-sm">Past orders</p>
+        </Link>
       </section>
 
       <style>{`
         .sd { display: flex; flex-direction: column; gap: 16px; }
-        .sd-hero { display: grid; grid-template-columns: 1.2fr 1fr; gap: 24px; padding: 24px; }
-        .sd-hero-copy { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; }
-        .sd-hero-copy h1 { font-size: clamp(1.6rem, 4vw, 2.8rem); line-height: 1; letter-spacing: -0.02em; }
-        .sd-hero-copy p { font-size: 0.92rem; line-height: 1.6; }
-        .sd-hero-metrics { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
-        .sd-hero-metric { border: 1px solid var(--border-glass); border-radius: 12px; background: rgba(255,255,255,0.04); padding: 14px; display: flex; flex-direction: column; gap: 4px; }
-        .sd-hero-val { font-size: 1.15rem; font-weight: 800; color: var(--text-primary); text-transform: capitalize; }
-        .sd-hero-label { font-size: 0.72rem; color: var(--text-muted); font-weight: 600; }
-        .sd-section-head h2 { font-size: 1rem; font-weight: 800; margin-bottom: 12px; }
-
-        .sd-main-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: stretch; }
-
-        .sd-sub { display: flex; flex-direction: column; gap: 12px; }
-        .sd-sub-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
-        .sd-sub-head h2 { font-size: 1rem; font-weight: 800; margin-top: 4px; margin-bottom: 0; }
-        .sd-sub-ring { width: 130px; height: 130px; border-radius: 50%; margin: 4px auto 0; display: grid; place-items: center; background: conic-gradient(var(--primary-indigo) var(--usage), rgba(255,255,255,0.06) 0); flex-shrink: 0; }
-        .sd-sub-ring-inner { width: 96px; height: 96px; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; background: var(--bg-space); }
-        .sd-sub-ring-inner strong { font-size: 1.6rem; line-height: 1; }
-        .sd-sub-ring-inner span { color: var(--text-muted); font-size: 0.72rem; }
-        .sd-sub-info { display: flex; flex-direction: column; gap: 6px; }
-        .sd-sub-info p { font-size: 0.82rem; color: var(--text-secondary); margin-bottom: 0; }
-
-        .sd-active-order { display: flex; flex-direction: column; gap: 12px; }
-        .sd-active-order-details { display: flex; flex-direction: column; gap: 8px; }
-        .sd-aod-row { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-glass); padding-bottom: 8px; font-size: 0.85rem; }
-        .sd-aod-row span { color: var(--text-muted); }
-        .sd-aod-row strong { color: var(--text-primary); font-weight: 700; }
-        .sd-pickup-code-section { text-align: center; padding: 16px; border: 1px dashed var(--border-active); border-radius: 12px; background: rgba(139,92,246,0.06); }
-        .sd-pickup-code-large { font-size: 2rem; letter-spacing: 0.08em; font-weight: 900; color: var(--primary-indigo); display: block; margin-top: 4px; }
-
-        .sd-tracking-section { display: grid; grid-template-columns: 1.4fr 1fr; gap: 16px; align-items: start; }
-
+        .sd-hero { display: flex; justify-content: space-between; align-items: center; gap: 20px; padding: 24px; }
+        .sd-hero-content { display: flex; align-items: center; gap: 16px; }
+        .sd-avatar { width: 52px; height: 52px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, var(--primary-indigo), #6366f1); color: #fff; font-weight: 900; font-size: 1.2rem; flex-shrink: 0; }
+        .sd-hero-stats { display: flex; gap: 24px; }
+        .sd-stat { text-align: center; }
+        .sd-stat strong { display: block; font-size: 1.5rem; font-weight: 800; }
+        .sd-stat span { font-size: 0.75rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; }
+        .sd-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .sd-section-title { font-size: 1rem; font-weight: 800; }
+        .sd-balance { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 24px; }
+        .sd-balance-ring { width: 140px; height: 140px; }
+        .sd-ring-svg { width: 100%; height: 100%; }
+        .sd-balance-bar { width: 100%; }
+        .sd-balance-track { height: 6px; background: rgba(255,255,255,0.06); border-radius: 3px; overflow: hidden; margin-bottom: 6px; }
+        .sd-balance-fill { height: 100%; background: linear-gradient(90deg, var(--primary-indigo), #6366f1); border-radius: 3px; transition: width 0.5s ease; }
+        .sd-order { padding: 24px; }
+        .sd-order-info { display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px; }
+        .sd-order-file { display: flex; flex-direction: column; gap: 2px; }
+        .sd-order-meta { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+        .sd-order-meta div { display: flex; flex-direction: column; gap: 2px; }
+        .sd-pickup-code { text-align: center; padding: 12px; background: rgba(34,211,238,0.08); border-radius: 12px; margin-bottom: 16px; }
+        .sd-pickup-value { font-size: 2rem; font-weight: 900; letter-spacing: 0.1em; color: var(--accent-cyan); display: block; }
         .sd-timeline { display: flex; flex-direction: column; gap: 0; position: relative; }
-        .sd-tl-step { display: flex; gap: 14px; position: relative; }
-        .sd-tl-line { display: flex; flex-direction: column; align-items: center; width: 28px; flex-shrink: 0; }
-        .sd-tl-dot { width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: 800; flex-shrink: 0; z-index: 1; transition: all var(--transition-normal); }
-        .sd-tl-dot.dot-completed { background: rgba(52,211,153,0.18); color: #34d399; border: 2px solid #34d399; }
-        .sd-tl-dot.dot-current { background: rgba(139,92,246,0.2); color: var(--primary-indigo); border: 2px solid var(--primary-indigo); box-shadow: 0 0 12px rgba(139,92,246,0.5), 0 0 24px rgba(139,92,246,0.25); animation: tl-glow 1.5s ease-in-out infinite alternate; }
-        .sd-tl-dot.dot-future { background: rgba(255,255,255,0.05); color: var(--text-muted); border: 2px solid var(--border-glass); }
-        .sd-tl-connector { width: 2px; flex: 1; min-height: 28px; background: var(--border-glass); margin: 2px 0; }
-        .sd-tl-connector.connector-done { background: #34d399; }
-        .sd-tl-content { padding-bottom: 20px; flex: 1; }
-        .sd-tl-content strong { font-size: 0.88rem; display: block; margin-bottom: 2px; }
-        .sd-tl-content p { font-size: 0.78rem; color: var(--text-muted); margin: 0; }
-        .sd-tl-time { font-size: 0.7rem; color: var(--text-secondary); display: block; margin-top: 4px; }
-        .sd-tl-step.future .sd-tl-content { opacity: 0.4; }
-        .sd-tl-step.current .sd-tl-content strong { color: var(--primary-indigo); }
-        .sd-tl-active-count { margin-top: 4px; padding-left: 42px; }
-
-        @keyframes tl-glow {
-          from { box-shadow: 0 0 8px rgba(139,92,246,0.4), 0 0 16px rgba(139,92,246,0.2); }
-          to { box-shadow: 0 0 16px rgba(139,92,246,0.6), 0 0 32px rgba(139,92,246,0.3); }
-        }
-
-        .sd-actions-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-        .sd-action-btn { text-align: left; cursor: pointer; padding: 12px; border: 1px solid var(--border-glass); border-radius: 12px; background: rgba(255,255,255,0.04); color: var(--text-primary); display: flex; flex-direction: column; gap: 4px; transition: border-color var(--transition-fast), transform var(--transition-fast); text-decoration: none; }
-        .sd-action-btn:hover { border-color: var(--border-active); transform: translateY(-1px); }
-        .sd-action-btn span { color: var(--text-muted); font-size: 0.75rem; line-height: 1.3; }
-
-        @media (max-width: 960px) { .sd-hero, .sd-main-grid, .sd-tracking-section { grid-template-columns: 1fr; } }
-        @media (max-width: 768px) {
-          .sd-hero { padding: 16px; }
-          .sd-hero-metrics { grid-template-columns: repeat(2, 1fr); }
-          .sd-actions-grid { grid-template-columns: 1fr; }
-          .sd-pickup-code-large { font-size: 1.5rem; }
-          .sd-tl-dot { width: 18px; height: 18px; font-size: 0.6rem; }
-          .sd-tl-content strong { font-size: 0.82rem; }
-          .sd-tl-content p { font-size: 0.72rem; }
-          .sd-tl-content { padding-bottom: 14px; }
-        }
-        @media (max-width: 375px) {
-          .sd-hero-metrics { grid-template-columns: 1fr 1fr; }
-          .sd-hero { padding: 12px; }
+        .sd-timeline-step { display: flex; gap: 12px; min-height: 48px; }
+        .sd-timeline-node { display: flex; flex-direction: column; align-items: center; width: 24px; flex-shrink: 0; }
+        .sd-timeline-dot { width: 12px; height: 12px; border-radius: 50%; background: rgba(255,255,255,0.1); border: 2px solid rgba(255,255,255,0.15); flex-shrink: 0; z-index: 1; }
+        .sd-timeline-step.active .sd-timeline-dot { background: var(--primary-indigo); border-color: var(--primary-indigo); }
+        .sd-timeline-step.current .sd-timeline-dot { box-shadow: 0 0 0 4px rgba(139,92,246,0.2); }
+        .sd-timeline-line { width: 2px; flex: 1; background: rgba(255,255,255,0.08); margin: 2px 0; }
+        .sd-timeline-step.active .sd-timeline-line { background: var(--primary-indigo); }
+        .sd-timeline-content { display: flex; align-items: center; gap: 8px; padding: 4px 0; min-height: 48px; }
+        .sd-timeline-icon { font-size: 1rem; }
+        .sd-timeline-label { font-size: 0.88rem; font-weight: 600; }
+        .sd-timeline-step.active .sd-timeline-label { color: var(--text-primary); }
+        .sd-no-order { padding: 40px; display: flex; align-items: center; justify-content: center; }
+        .sd-no-order-content { text-align: center; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+        .sd-no-order-content h2 { font-size: 1.2rem; font-weight: 800; }
+        .sd-actions { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+        .sd-action-card { padding: 20px; text-decoration: none; display: flex; flex-direction: column; gap: 6px; }
+        .sd-action-card h3 { font-size: 0.95rem; font-weight: 700; color: var(--text-primary); }
+        .sd-action-icon { font-size: 1.5rem; }
+        @media (max-width: 860px) {
+          .sd-grid { grid-template-columns: 1fr; }
+          .sd-actions { grid-template-columns: repeat(2, 1fr); }
+          .sd-hero { flex-direction: column; text-align: center; }
+          .sd-hero-content { flex-direction: column; }
+          .sd-order-meta { grid-template-columns: 1fr; }
         }
       `}</style>
     </div>

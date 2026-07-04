@@ -3,6 +3,7 @@
 import { signOut, useSession } from "next-auth/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useState, useEffect } from "react";
 
 export default function Navbar() {
   const { data: session } = useSession();
@@ -11,13 +12,22 @@ export default function Navbar() {
   const isStudent = user?.role === "student";
   const isStaff = user?.role === "admin";
 
-  const remainingPages = 0;
+  const [remainingPages, setRemainingPages] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (isStudent) {
+      fetch("/api/subscriptions/mine")
+        .then((r) => r.json())
+        .then((d) => setRemainingPages(d.remainingPages ?? 0))
+        .catch(() => setRemainingPages(0));
+    }
+  }, [isStudent]);
 
   const navLinks = isStudent
     ? [
         { href: "/dashboard", label: "Home" },
         { href: "/upload", label: "Upload" },
-        { href: "/subscribe", label: "Plan" },
+        { href: "/subscribe", label: "Packs" },
       ]
     : isStaff
       ? [{ href: "/admin/dashboard", label: "Console" }]
@@ -47,7 +57,7 @@ export default function Navbar() {
           <div className="nav-actions">
             {user ? (
               <>
-                {isStudent && (
+                {isStudent && remainingPages !== null && (
                   <div className="pages-pill">
                     <span className="pages-count">{remainingPages}</span>
                     <span className="pages-label">pages left</span>

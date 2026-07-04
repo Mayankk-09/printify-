@@ -17,18 +17,22 @@ export const { auth } = NextAuth({
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        token.id = user.id;
-        token.role = (user as any).role;
+        token.id = user.id as string;
+        token.role = (user as any).role as string;
       }
+      if (!token.id) return null;
       return token;
     },
     async session({ session, token }) {
-      if (session.user) {
+      if (session.user && token.id) {
         session.user.id = token.id as string;
         session.user.role = token.role as string;
       }
       return session;
     },
+  },
+  pages: {
+    signIn: "/login",
   },
   session: { strategy: "jwt" },
 });

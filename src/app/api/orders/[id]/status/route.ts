@@ -2,7 +2,22 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 
-const validStatuses = ["SUBMITTED", "ACCEPTED", "PRINTING", "READY", "COLLECTED", "CANCELLED"];
+const validStatuses: Record<string, string[]> = {
+  SUBMITTED: ["ACCEPTED", "CANCELLED"],
+  ACCEPTED: ["PRINTING", "CANCELLED"],
+  PRINTING: ["READY", "CANCELLED"],
+  READY: ["COLLECTED"],
+  COLLECTED: [],
+  CANCELLED: [],
+};
+
+const statusTimestampField: Record<string, string> = {
+  ACCEPTED: "acceptedAt",
+  PRINTING: "printingAt",
+  READY: "readyAt",
+  COLLECTED: "collectedAt",
+  CANCELLED: "cancelledAt",
+};
 
 export async function PATCH(
   request: Request,
@@ -10,43 +25,72 @@ export async function PATCH(
 ) {
   const { id } = await params;
   const session = await auth();
-  if (!session?.user || session.user.role !== "admin") {
+  if (session?.user?.role !== "admin") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
   }
 
   try {
-    const body = await request.json();
-    const { status } = body;
+    const { status } = await request.json();
 
-    if (!validStatuses.includes(status)) {
-      return NextResponse.json({ error: "Invalid status" }, { status: 400 });
+    const order = await prisma.order.findUnique({
+      where: { id },
+      include: { pickupCode: true },
+    });
+
+    if (!order) {
+      return NextResponse.json({ error: "Order not found" }, { status: 404 });
     }
 
-    const updateData: any = { status };
+    const allowedNext = validStatuses[order.status];
+    if (!allowedNext || !allowedNext.includes(status)) {
+      return NextResponse.json(
+        { error: `Cannot transition from ${order.status} to ${status}` },
+        { status: 400 }
+      );
+    }
 
-    if (status === "ACCEPTED") updateData.acceptedAt = new Date();
-    if (status === "PRINTING") updateData.printingAt = new Date();
-    if (status === "READY") updateData.readyAt = new Date();
-    if (status === "COLLECTED") updateData.collectedAt = new Date();
-    if (status === "CANCELLED") updateData.cancelledAt = new Date();
+    const updateData: Record<string, any> = { status };
+    const timestampField = statusTimestampField[status];
+    if (timestampField) {
+      updateData[timestampField] = new Date();
+    }
 
     if (status === "READY") {
-      const order = await prisma.order.findUnique({ where: { id: id } });
-      const code = `P-${order?.orderNumber?.slice(-4) || Math.random().toString(36).substr(2, 6).toUpperCase()}`;
-      await prisma.pickupCode.upsert({
-        where: { orderId: id },
-        update: { code },
-        create: { orderId: id, code },
+      const existingCode = await prisma.pickupCode.findUnique({
+        where: { orderId: order.id },
+      });
+      if (!existingCode) {
+        const code = `P-${order.orderNumber.slice(-4)}`;
+        await prisma.pickupCode.create({
+          data: {
+            orderId: order.id,
+            code,
+          },
+        });
+      }
+    }
+
+    if (status === "COLLECTED") {
+      await prisma.pickupCode.updateMany({
+        where: { orderId: order.id },
+        data: { collectedAt: new Date() },
       });
     }
 
-    const order = await prisma.order.update({
+    const updated = await prisma.order.update({
       where: { id: id },
       data: updateData,
+      include: {
+        user: { select: { name: true, email: true, phone: true } },
+        pickupCode: true,
+        orderAddons: true,
+        orderPack: true,
+        payments: true,
+      },
     });
 
-    return NextResponse.json({ message: `Order status updated to ${status}`, order });
+    return NextResponse.json(updated);
   } catch (error: any) {
-    return NextResponse.json({ error: error.message || "Update failed" }, { status: 500 });
+    return NextResponse.json({ error: error.message || "Status update failed" }, { status: 500 });
   }
 }

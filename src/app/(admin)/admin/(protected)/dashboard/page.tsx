@@ -1,15 +1,17 @@
 import { prisma } from "@/lib/prisma";
-import { OrderStatus } from "@prisma/client";
 import { requireAdmin } from "@/lib/auth-guard";
 import Link from "next/link";
 
 async function getMetrics() {
-  const [totalUsers, totalOrders, totalSubscriptions, payments] = await Promise.all([
+  const [totalUsers, totalOrders, payments] = await Promise.all([
     prisma.user.count({ where: { role: "student" } }),
     prisma.order.count(),
-    prisma.subscription.count({ where: { status: "active" } }),
     prisma.payment.findMany({ where: { status: "COMPLETED" } }),
   ]);
+
+  const activeSubscriptions = await prisma.subscription.count({
+    where: { status: "active" },
+  });
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -40,7 +42,7 @@ async function getMetrics() {
   return {
     totalStudents: totalUsers,
     totalOrders,
-    activeSubscriptions: totalSubscriptions,
+    activeSubscriptions,
     revenue,
     ordersToday,
     ordersThisMonth,
@@ -57,14 +59,14 @@ export default async function AdminDashboardPage() {
       <div className="ad-header" style={{ marginBottom: 24 }}>
         <div>
           <span className="eyebrow">Dashboard</span>
-          <h1 className="page-title">Welcome back, {session.user.name}</h1>
+          <h1 className="page-title">Welcome back, {session.user!.name}</h1>
           <p className="text-secondary">Here&apos;s an overview of your print shop.</p>
         </div>
       </div>
 
       <section className="ad-stats-grid">
         <div className="glass-card ad-stat-card">
-          <span className="ad-stat-label">Active Subscriptions</span>
+          <span className="ad-stat-label">Active Page Packs</span>
           <strong className="ad-stat-value">{metrics.activeSubscriptions}</strong>
         </div>
         <div className="glass-card ad-stat-card">
@@ -100,7 +102,7 @@ export default async function AdminDashboardPage() {
         </Link>
         <Link href="/admin/plans" className="glass-card ad-link-card">
           <h3>Manage Plans</h3>
-          <p className="text-secondary text-sm">Create and edit subscription plans</p>
+          <p className="text-secondary text-sm">Create and edit page packs</p>
         </Link>
         <Link href="/admin/analytics" className="glass-card ad-link-card">
           <h3>Analytics</h3>

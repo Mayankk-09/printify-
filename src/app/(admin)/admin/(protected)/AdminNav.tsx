@@ -9,8 +9,9 @@ const adminLinks = [
   { href: "/admin/dashboard", label: "Dashboard", icon: "◷" },
   { href: "/admin/orders", label: "Orders", icon: "☰" },
   { href: "/admin/users", label: "Users", icon: "○" },
-  { href: "/admin/plans", label: "Plans", icon: "◉" },
-  { href: "/admin/subscriptions", label: "Subscriptions", icon: "◎" },
+  { href: "/admin/plans", label: "Packs", icon: "◉" },
+  { href: "/admin/addons", label: "Add-ons", icon: "⊕" },
+  { href: "/admin/subscriptions", label: "Purchases", icon: "◎" },
   { href: "/admin/analytics", label: "Analytics", icon: "▤" },
   { href: "/admin/settings", label: "Settings", icon: "⚙" },
 ];

@@ -8,11 +8,20 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const subscription = await prisma.subscription.findFirst({
+  const subscriptions = await prisma.subscription.findMany({
     where: { userId: session.user.id, status: "active" },
-    include: { plan: true },
-    orderBy: { createdAt: "desc" },
+    include: { pack: true },
+    orderBy: { createdAt: "asc" },
   });
 
-  return NextResponse.json({ subscription });
+  const totalAllowed = subscriptions.reduce((s, sub) => s + sub.pagesAllowed, 0);
+  const totalUsed = subscriptions.reduce((s, sub) => s + sub.pagesUsed, 0);
+  const remainingPages = Math.max(0, totalAllowed - totalUsed);
+
+  return NextResponse.json({
+    subscriptions,
+    totalAllowed,
+    totalUsed,
+    remainingPages,
+  });
 }

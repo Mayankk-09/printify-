@@ -16,9 +16,18 @@ async function main() {
     return;
   }
 
+  const orders = await prisma.order.findMany({
+    where: { userId: { in: ids } },
+    select: { id: true },
+  });
+  const orderIds = orders.map((o) => o.id);
+
   await prisma.$transaction([
+    prisma.pickupCode.deleteMany({ where: { orderId: { in: orderIds } } }),
+    prisma.order.deleteMany({ where: { id: { in: orderIds } } }),
+    prisma.payment.deleteMany({ where: { userId: { in: ids } } }),
+    prisma.subscription.deleteMany({ where: { userId: { in: ids } } }),
     prisma.uploadedFile.deleteMany({ where: { userId: { in: ids } } }),
-    prisma.auditLog.deleteMany({ where: { userId: { in: ids } } }),
     prisma.user.deleteMany({ where: { id: { in: ids } } }),
   ]);
 

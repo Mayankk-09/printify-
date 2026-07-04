@@ -1,35 +1,53 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { planSchema } from "@/lib/validations";
 import { auth } from "@/lib/auth";
+import { packSchema } from "@/lib/validations";
 
 export async function GET() {
   const session = await auth();
   const isAdmin = session?.user?.role === "admin";
 
-  const plans = await prisma.plan.findMany({
+  const packs = await prisma.pack.findMany({
     orderBy: { displayOrder: "asc" },
-    where: isAdmin ? undefined : { active: true },
+    where: isAdmin ? {} : { active: true },
   });
-  return NextResponse.json(plans);
+
+  return NextResponse.json(packs);
 }
 
 export async function POST(request: Request) {
   const session = await auth();
-  if (!session?.user || session.user.role !== "admin") {
+  if (session?.user?.role !== "admin") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
   }
 
   try {
     const body = await request.json();
-    const parsed = planSchema.safeParse(body);
-    if (!parsed.success) {
-      return NextResponse.json({ error: parsed.error.errors[0]?.message }, { status: 400 });
+    const parsed = packSchema.parse(body);
+
+    const existing = await prisma.pack.findUnique({ where: { slug: parsed.slug } });
+    if (existing) {
+      return NextResponse.json({ error: "A pack with this slug already exists" }, { status: 400 });
     }
 
-    const plan = await prisma.plan.create({ data: parsed.data });
-    return NextResponse.json(plan, { status: 201 });
+    const pack = await prisma.pack.create({
+      data: {
+        name: parsed.name,
+        slug: parsed.slug,
+        description: parsed.description,
+        price: parsed.price,
+        pages: parsed.pages,
+        packType: parsed.packType,
+        active: parsed.active,
+        displayOrder: parsed.displayOrder,
+      },
+    });
+
+    return NextResponse.json(pack, { status: 201 });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message || "Failed to create plan" }, { status: 500 });
+    if (error.name === "ZodError") {
+      return NextResponse.json({ error: error.errors }, { status: 400 });
+    }
+    return NextResponse.json({ error: error.message || "Failed to create pack" }, { status: 500 });
   }
 }

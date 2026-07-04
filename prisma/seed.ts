@@ -1,80 +1,84 @@
-import { PrismaClient, UserRole } from "@prisma/client";
-import { hashSync } from "bcryptjs";
+import { PrismaClient, PackType } from "@prisma/client";
+import { hash } from "bcryptjs";
 
 const prisma = new PrismaClient();
 
 async function main() {
-  const adminEmail = "admin@printify.com";
-  const existingAdmin = await prisma.user.findUnique({ where: { email: adminEmail } });
-  if (existingAdmin) {
-    console.log("Seed data already exists, skipping.");
-    return;
-  }
-
-  const admin = await prisma.user.create({
-    data: {
-      name: "Printify Admin",
-      email: adminEmail,
-      passwordHash: hashSync("admin123", 10),
-      phone: "9999999999",
-      role: UserRole.admin,
+  const admin = await prisma.user.upsert({
+    where: { email: "admin@printify.com" },
+    update: {},
+    create: {
+      name: "Admin",
+      email: "admin@printify.com",
+      passwordHash: await hash("admin123", 10),
+      role: "admin",
     },
   });
+  console.log(`Admin: ${admin.email}`);
 
-  const plans = await Promise.all([
-    prisma.plan.create({
-      data: {
-        name: "Starter",
-        slug: "starter",
-        description: "50 black & white pages per month. Ideal for light printing.",
-        monthlyPrice: 249,
-        pagesIncluded: 50,
-        supportsColor: false,
-        validityDays: 30,
-        displayOrder: 1,
-      },
-    }),
-    prisma.plan.create({
-      data: {
-        name: "Pro",
-        slug: "pro",
-        description: "100 black & white pages per month. Best value for regular printing.",
-        monthlyPrice: 499,
-        pagesIncluded: 100,
-        supportsColor: false,
-        validityDays: 30,
-        displayOrder: 2,
-      },
-    }),
-    prisma.plan.create({
-      data: {
-        name: "Premium",
-        slug: "premium",
-        description: "100 pages including color. For students who need color printing.",
-        monthlyPrice: 749,
-        pagesIncluded: 100,
-        supportsColor: true,
-        validityDays: 30,
-        displayOrder: 3,
-      },
-    }),
-  ]);
+  const packs = [
+    { name: "50 Pages Pack", slug: "50-pages", price: 24900, pages: 50, packType: PackType.BW_AND_COLOR, displayOrder: 1 },
+    { name: "100 Pages Pack", slug: "100-pages", price: 39900, pages: 100, packType: PackType.BW_AND_COLOR, displayOrder: 2 },
+    { name: "150 Pages Pack", slug: "150-pages", price: 54900, pages: 150, packType: PackType.BW_AND_COLOR, displayOrder: 3 },
+  ];
 
-  await prisma.systemSetting.createMany({
-    data: [
-      { key: "bw_page_cost", value: "0.50", type: "number" },
-      { key: "color_page_cost", value: "3.00", type: "number" },
-      { key: "staple_cost", value: "0.10", type: "number" },
-      { key: "punch_cost", value: "0.10", type: "number" },
-      { key: "cobra_file_cost", value: "12.00", type: "number" },
-      { key: "transparent_file_cost", value: "4.00", type: "number" },
-      { key: "folder_cost", value: "8.00", type: "number" },
-      { key: "max_file_size_mb", value: "15", type: "number" },
-      { key: "allowed_file_types", value: "pdf,docx,pptx", type: "string" },
-    ],
-  });
+  for (const pack of packs) {
+    await prisma.pack.upsert({
+      where: { slug: pack.slug },
+      update: pack,
+      create: pack,
+    });
+  }
+  console.log(`Seeded ${packs.length} packs`);
 
-  console.log(`Seed complete: Admin (${admin.email}), ${plans.length} plans created.`);
+  const defaultAddons = [
+    { name: "Staple", description: "Staple binding", price: 200, displayOrder: 1 },
+    { name: "Punch Holes", description: "Punch holes for filing", price: 100, displayOrder: 2 },
+    { name: "Cobra File", description: "Cobra file binding", price: 2000, displayOrder: 3 },
+    { name: "Clear Cover", description: "Transparent cover", price: 1000, displayOrder: 4 },
+    { name: "Folder", description: "Cardboard folder", price: 1500, displayOrder: 5 },
+  ];
+
+  for (const addon of defaultAddons) {
+    const existing = await prisma.addon.findFirst({ where: { name: addon.name } });
+    if (!existing) {
+      await prisma.addon.create({ data: addon });
+    }
+  }
+  console.log(`Seeded ${defaultAddons.length} add-ons`);
+
+  const defaultSettings: { key: string; value: string; type: string }[] = [
+    { key: "pagePriceBW", value: "500", type: "number" },
+    { key: "pagePriceColor", value: "1000", type: "number" },
+    { key: "maxFileSize", value: "15728640", type: "number" },
+    { key: "allowedFileTypes", value: "pdf,doc,docx,ppt,pptx", type: "string" },
+    { key: "trialMaxPages", value: "5", type: "number" },
+    { key: "trialPrintMode", value: "BW", type: "string" },
+  ];
+
+  for (const setting of defaultSettings) {
+    await prisma.systemSetting.upsert({
+      where: { key: setting.key },
+      update: setting,
+      create: setting,
+    });
+  }
+  console.log(`Seeded ${defaultSettings.length} system settings`);
+
+  const existingPickupSetting = await prisma.pickupSetting.findFirst();
+  if (!existingPickupSetting) {
+    await prisma.pickupSetting.create({
+      data: {
+        cutoffTime: "14:00",
+        maxAdvanceDays: 7,
+        workingDays: "1,2,3,4,5,6",
+        slots: "09:00-10:40,10:40-12:20,12:20-14:00,14:00-15:40,15:40-17:20",
+      },
+    });
+    console.log("Seeded pickup settings");
+  }
+
+  console.log("Seed complete!");
 }
 
 main()
@@ -82,6 +86,4 @@ main()
     console.error(e);
     process.exit(1);
   })
-  .finally(async () => {
-    await prisma.$disconnect();
-  });
+  .finally(() => prisma.$disconnect());

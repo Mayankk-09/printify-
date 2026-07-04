@@ -10,21 +10,45 @@ export default async function DashboardPage() {
 
   const userId = session.user.id;
 
-  const [user, subscription, latestOrder] = await Promise.all([
+  const [user, subscriptions, activeOrders] = await Promise.all([
     prisma.user.findUnique({ where: { id: userId } }),
-    prisma.subscription.findFirst({
+    prisma.subscription.findMany({
       where: { userId, status: "active" },
-      include: { plan: true },
-      orderBy: { createdAt: "desc" },
+      include: { pack: true },
+      orderBy: { createdAt: "asc" },
     }),
-    prisma.order.findFirst({
-      where: { userId, status: { in: ["SUBMITTED", "ACCEPTED", "PRINTING", "READY"] } },
+    prisma.order.findMany({
+      where: {
+        userId,
+        status: { in: ["SUBMITTED", "ACCEPTED", "PRINTING", "READY"] },
+      },
       orderBy: { createdAt: "desc" },
-      include: { pickupCode: true },
+      include: {
+        pickupCode: true,
+        orderAddons: true,
+        orderPack: true,
+      },
+      take: 1,
     }),
   ]);
 
-  if (!user) redirect("/login");
+  if (!user) redirect("/login?reason=expired");
 
-  return <StudentDashboardClient user={user} subscription={subscription} activeOrder={latestOrder} />;
+  const totalAllowed = subscriptions.reduce((s, sub) => s + sub.pagesAllowed, 0);
+  const totalUsed = subscriptions.reduce((s, sub) => s + sub.pagesUsed, 0);
+  const remainingPages = Math.max(0, totalAllowed - totalUsed);
+  const hasTrial = user.hasClaimedTrial && !user.hasUsedTrial;
+  const activeOrder = activeOrders[0] || null;
+
+  return (
+    <StudentDashboardClient
+      user={user}
+      subscriptions={subscriptions}
+      totalAllowed={totalAllowed}
+      totalUsed={totalUsed}
+      remainingPages={remainingPages}
+      activeOrder={activeOrder}
+      hasTrial={hasTrial}
+    />
+  );
 }

@@ -22,9 +22,9 @@ export default async function AdminAnalyticsPage() {
     .reduce((sum, o) => sum + o.pages * o.copies, 0);
   const totalPages = allOrders.reduce((sum, o) => sum + o.pages * o.copies, 0);
 
-  const subscriptionRevenue = payments.reduce((sum, p) => sum + p.amount, 0);
-  const addonRevenue = allOrders.reduce((sum, o) => sum + (o.addonCost || 0), 0);
-  const totalRevenue = subscriptionRevenue + addonRevenue;
+  const packRevenue = payments.reduce((sum, p) => sum + p.amount, 0);
+  const addonRevenue = allOrders.reduce((sum, o) => sum + ((o as any).addonCost || 0), 0);
+  const totalRevenue = packRevenue + addonRevenue;
 
   const bwCost = 0.50;
   const colorCost = 3.00;
@@ -46,7 +46,7 @@ export default async function AdminAnalyticsPage() {
 
       <div className="ad-stats-grid" style={{ marginBottom: 24 }}>
         <div className="glass-card ad-stat-card">
-          <span className="ad-stat-label">Active Subscribers</span>
+          <span className="ad-stat-label">Active Page Packs</span>
           <strong className="ad-stat-value">{activeSubs}</strong>
         </div>
         <div className="glass-card ad-stat-card">
@@ -67,7 +67,7 @@ export default async function AdminAnalyticsPage() {
         <div className="glass-card">
           <h2 className="ad-section-title">Revenue Breakdown</h2>
           <div className="ad-bar-list">
-            <div><span>Subscriptions</span><strong>₹{subscriptionRevenue}</strong></div>
+            <div><span>Page Packs</span><strong>₹{packRevenue}</strong></div>
             <div><span>Add-ons</span><strong>₹{addonRevenue}</strong></div>
           </div>
         </div>

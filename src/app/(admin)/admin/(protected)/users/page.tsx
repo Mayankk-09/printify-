@@ -11,7 +11,7 @@ export default async function AdminUsersPage() {
       subscriptions: {
         where: { status: "active" },
         take: 1,
-        include: { plan: true },
+        include: { pack: true },
       },
       _count: { select: { orders: true } },
     },

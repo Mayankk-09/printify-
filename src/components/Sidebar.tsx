@@ -10,7 +10,7 @@ const navItems = [
   { href: "/upload", label: "Upload", icon: "↑" },
   { href: "/orders/current", label: "Current Orders", icon: "○" },
   { href: "/orders/history", label: "Order History", icon: "◎" },
-  { href: "/subscribe", label: "Plan", icon: "◉" },
+  { href: "/subscribe", label: "Packs", icon: "◉" },
   { href: "/profile", label: "Profile", icon: "▤" },
 ];
 

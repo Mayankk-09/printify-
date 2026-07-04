@@ -54,7 +54,7 @@ export default function AdminUsersClient({ users }: { users: any[] }) {
                   <td>{u.email}</td>
                   <td>{u.phone || "—"}</td>
                   <td><span className="status-badge status-READY">{u.role}</span></td>
-                  <td>{u.subscriptions[0]?.plan?.name || "None"}</td>
+                  <td>{u.subscriptions[0]?.pack?.name || "None"}</td>
                   <td>{u._count.orders}</td>
                   <td><small>{new Date(u.createdAt).toLocaleDateString()}</small></td>
                 </tr>

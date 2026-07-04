@@ -1,26 +1,15 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
-import { isValidSlot } from "@/lib/slots";
+import { PAGE_PRICE_BW, PAGE_PRICE_COLOR, calculateOrderCost } from "@/lib/pricing";
+import { getPickupSettings, isValidSlot } from "@/lib/pickup";
+import crypto from "crypto";
 
-const PAGE_PRICE_BW = 5;
-const PAGE_PRICE_COLOR = 10;
-
-async function getAddonPrices(): Promise<Record<string, number>> {
-  const settings = await prisma.systemSetting.findMany({
-    where: { key: { in: ["staple_cost", "punch_cost", "cobra_file_cost", "transparent_file_cost", "folder_cost"] } },
-  });
-  const map: Record<string, number> = {};
-  for (const s of settings) {
-    map[s.key] = parseFloat(s.value) || 0;
-  }
-  return {
-    staple: map.staple_cost ?? 2,
-    punchHoles: map.punch_cost ?? 1,
-    cobraFile: map.cobra_file_cost ?? 20,
-    transparentFile: map.transparent_file_cost ?? 10,
-    folder: map.folder_cost ?? 15,
-  };
+function generateOrderNumber(): string {
+  const now = new Date();
+  const date = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}`;
+  const rand = crypto.randomBytes(3).toString("hex").toUpperCase();
+  return `ORD-${date}-${rand}`;
 }
 
 export async function GET() {
@@ -35,6 +24,9 @@ export async function GET() {
       include: {
         user: { select: { name: true, email: true, phone: true } },
         pickupCode: true,
+        orderAddons: true,
+        orderPack: true,
+        payments: true,
       },
     });
     return NextResponse.json(orders);
@@ -43,7 +35,12 @@ export async function GET() {
   const orders = await prisma.order.findMany({
     where: { userId: session.user.id },
     orderBy: { createdAt: "desc" },
-    include: { pickupCode: true },
+    include: {
+      pickupCode: true,
+      orderAddons: true,
+      orderPack: true,
+      payments: true,
+    },
   });
   return NextResponse.json(orders);
 }
@@ -54,6 +51,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const userId = session.user.id;
+
   try {
     const body = await request.json();
     const {
@@ -62,148 +61,247 @@ export async function POST(request: Request) {
       fileSize,
       pages,
       copies,
+      printablePages,
       printMode,
       printSide,
-      addons,
+      addonIds,
       notes,
       pickupDate,
       pickupSlot,
       paymentConfirmed,
+      razorpayPaymentId,
+      razorpayOrderId,
+      razorpaySignature,
     } = body;
 
-    if (!fileName || !filePath || !pages || !copies || !printMode || !printSide) {
+    const numCopies = Number(copies) || 1;
+    const totalPrintablePages = printablePages || pages * numCopies;
+
+    if (!fileName || !filePath || !pages || !printMode || !printSide) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
-    if (pickupSlot && !isValidSlot(pickupSlot)) {
-      return NextResponse.json({ error: "Invalid pickup slot" }, { status: 400 });
-    }
-
-    const totalPagesNeeded = pages * copies;
-    const pagePrice = printMode === "COLOR" ? PAGE_PRICE_COLOR : PAGE_PRICE_BW;
-
-    const addonPrices = await getAddonPrices();
-    let totalAddonCost = 0;
-    if (addons) {
-      for (const [key, enabled] of Object.entries(addons)) {
-        if (enabled && addonPrices[key]) {
-          totalAddonCost += addonPrices[key] * copies;
-        }
+    if (pickupSlot) {
+      const pickupSettings = await getPickupSettings();
+      if (!isValidSlot(pickupSettings.slots, pickupSlot)) {
+        return NextResponse.json({ error: "Invalid pickup slot" }, { status: 400 });
       }
     }
 
-    const subscription = await prisma.subscription.findFirst({
-      where: { userId: session.user.id, status: "active" },
-      include: { plan: true },
-      orderBy: { createdAt: "desc" },
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 400 });
+    }
+
+    const settings = await prisma.systemSetting.findMany();
+    const settingMap = Object.fromEntries(settings.map((s) => [s.key, s.value]));
+    const trialMaxPages = parseInt(settingMap.trialMaxPages || "5", 10);
+
+    const activeSubs = await prisma.subscription.findMany({
+      where: { userId, status: "active" },
+      include: { pack: true },
+      orderBy: { createdAt: "asc" },
     });
 
-    const hasSubscription = !!subscription;
-    const remainingPages = subscription
-      ? Math.max(0, subscription.pagesAllowed - subscription.pagesUsed)
-      : 0;
+    const totalAllowed = activeSubs.reduce((s, sub) => s + sub.pagesAllowed, 0);
+    const totalUsed = activeSubs.reduce((s, sub) => s + sub.pagesUsed, 0);
+    const remainingPages = Math.max(0, totalAllowed - totalUsed);
 
-    let coveredBySub = 0;
-    let excessPages = 0;
-    let chargeablePages = totalPagesNeeded;
+    const firstSub = activeSubs[0];
+    const packType = firstSub?.pack?.packType || null;
 
-    if (hasSubscription) {
-      if (totalPagesNeeded <= remainingPages) {
-        coveredBySub = totalPagesNeeded;
-        chargeablePages = 0;
-        excessPages = 0;
-      } else {
-        coveredBySub = remainingPages;
-        excessPages = totalPagesNeeded - remainingPages;
-        chargeablePages = excessPages;
-      }
+    const addons = await prisma.addon.findMany({
+      where: { id: { in: addonIds || [] }, active: true },
+    });
+
+    const addonPrices = addons.map((a) => ({
+      price: a.price,
+      quantity: numCopies,
+    }));
+
+    const isTrialEligible = user.hasClaimedTrial && !user.hasUsedTrial;
+
+    const costResult = calculateOrderCost({
+      pages,
+      copies: numCopies,
+      printMode,
+      addonPrices,
+      remainingPackPages: remainingPages,
+      packType,
+      isTrialEligible,
+      trialMaxPages,
+    });
+
+    const { breakdown, chargeablePages, coveredByPack, isTrialUsed } = costResult;
+
+    const requiresPayment = breakdown.grandTotal > 0 && !isTrialUsed;
+    const pagePrice = printMode === "COLOR" ? PAGE_PRICE_COLOR : PAGE_PRICE_BW;
+
+    if (isTrialEligible && !paymentConfirmed && printMode === "BW" && totalPrintablePages <= trialMaxPages && addonPrices.length === 0) {
+      return NextResponse.json({
+        requiresPayment: false,
+        trialEligible: true,
+        breakdown,
+        chargeablePages,
+        coveredByPack,
+        message: "Trial eligible. Submit to use free trial.",
+      });
     }
-
-    const pageCost = chargeablePages * pagePrice;
-    const totalCost = pageCost + totalAddonCost;
-    const requiresPayment = totalCost > 0;
-
-    console.log("========== ORDER CALCULATION ==========");
-    console.log("User ID:", session.user.id);
-    console.log("File:", fileName);
-    console.log("Pages:", pages, "× Copies:", copies, "= Total:", totalPagesNeeded);
-    console.log("Print mode:", printMode, "| Page price:", pagePrice);
-    console.log("Subscription status:", hasSubscription ? "ACTIVE" : "NONE");
-    if (hasSubscription) {
-      console.log("Plan:", subscription.plan.name);
-      console.log("Pages allowed:", subscription.pagesAllowed);
-      console.log("Pages used:", subscription.pagesUsed);
-      console.log("Remaining pages:", remainingPages);
-      console.log("Covered by subscription:", coveredBySub);
-    }
-    console.log("Excess pages:", excessPages);
-    console.log("Chargeable pages:", chargeablePages);
-    console.log("Page cost (rupees):", pageCost);
-    console.log("Addon cost (rupees):", totalAddonCost);
-    console.log("Total cost (rupees):", totalCost);
-    console.log("Requires payment:", requiresPayment);
-    console.log("Payment confirmed:", !!paymentConfirmed);
-    console.log("========================================");
 
     if (requiresPayment && !paymentConfirmed) {
       return NextResponse.json({
-        requiresPayment,
-        amount: totalCost,
-        pageCost,
-        addonCost: totalAddonCost,
+        requiresPayment: true,
+        amount: breakdown.grandTotal,
+        breakdown,
         chargeablePages,
-        excessPages,
-        coveredBySub,
-        hasSubscription,
-        remainingPages,
-        totalPagesNeeded,
+        coveredByPack,
+        totalPrintablePages,
+        pagePrice,
         message: "Payment required to complete order",
       });
     }
 
-    if (hasSubscription && coveredBySub > 0) {
-      await prisma.subscription.update({
-        where: { id: subscription.id },
-        data: { pagesUsed: subscription.pagesUsed + coveredBySub },
-      });
-      console.log("Deducted", coveredBySub, "pages from subscription");
+    if (!requiresPayment && remainingPages > 0 && coveredByPack > 0) {
+      if (packType === "BW_ONLY" && printMode === "COLOR") {
+        return NextResponse.json({
+          requiresPayment: true,
+          amount: breakdown.grandTotal,
+          breakdown,
+          chargeablePages,
+          coveredByPack: 0,
+          totalPrintablePages,
+          pagePrice,
+          message: "BW pack does not cover color printing. Payment required.",
+        });
+      }
     }
 
-    const now = new Date();
-    const orderNumber = `ORD-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
+    if (remainingPages > 0 && coveredByPack > 0 && chargeablePages > 0 && !paymentConfirmed) {
+      return NextResponse.json({
+        requiresPayment: true,
+        insufficientBalance: true,
+        remainingPages,
+        pagesRequired: chargeablePages,
+        amount: breakdown.grandTotal,
+        breakdown,
+        chargeablePages,
+        coveredByPack,
+        message: "Insufficient page balance. Payment required for excess pages.",
+      });
+    }
 
-    const order = await prisma.order.create({
-      data: {
-        orderNumber,
-        userId: session.user.id,
-        fileName,
-        filePath,
-        fileSize,
-        pages,
-        copies,
-        printMode,
-        printSide,
-        addons: addons || {},
-        addonCost: totalAddonCost,
-        notes,
-        pickupDate: pickupDate ? new Date(pickupDate) : null,
-        pickupSlot,
-      },
+    if (requiresPayment && paymentConfirmed && razorpayPaymentId && razorpayOrderId && razorpaySignature) {
+      const RAZORPAY_KEY_SECRET = process.env.RAZORPAY_KEY_SECRET || "";
+      const bodyText = razorpayOrderId + "|" + razorpayPaymentId;
+      const expectedSignature = crypto
+        .createHmac("sha256", RAZORPAY_KEY_SECRET)
+        .update(bodyText)
+        .digest("hex");
+
+      if (expectedSignature !== razorpaySignature) {
+        return NextResponse.json({ error: "Invalid payment signature" }, { status: 400 });
+      }
+    }
+
+    if (coveredByPack > 0 && !isTrialUsed) {
+      let toDeduct = coveredByPack;
+      for (const sub of activeSubs) {
+        if (toDeduct <= 0) break;
+        const subRemaining = sub.pagesAllowed - sub.pagesUsed;
+        const deductFromThis = Math.min(subRemaining, toDeduct);
+        if (deductFromThis > 0) {
+          await prisma.subscription.update({
+            where: { id: sub.id },
+            data: { pagesUsed: sub.pagesUsed + deductFromThis },
+          });
+          toDeduct -= deductFromThis;
+        }
+      }
+    }
+
+    if (isTrialUsed) {
+      await prisma.user.update({
+        where: { id: userId },
+        data: { hasUsedTrial: true, trialUsedAt: new Date() },
+      });
+    }
+
+    const orderNumber = generateOrderNumber();
+
+    const order = await prisma.$transaction(async (tx) => {
+      const created = await tx.order.create({
+        data: {
+          orderNumber,
+          userId,
+          fileName,
+          filePath,
+          fileSize,
+          pages,
+          copies: numCopies,
+          printablePages: totalPrintablePages,
+          printMode,
+          printSide,
+          notes,
+          pickupDate: pickupDate ? new Date(pickupDate) : null,
+          pickupSlot,
+        },
+      });
+
+      if (addons.length > 0) {
+        await tx.orderAddon.createMany({
+          data: addons.map((a) => ({
+            orderId: created.id,
+            addonId: a.id,
+            name: a.name,
+            price: a.price,
+            quantity: numCopies,
+          })),
+        });
+      }
+
+      if (firstSub) {
+        await tx.orderPack.create({
+          data: {
+            orderId: created.id,
+            packId: firstSub.packId,
+            packName: firstSub.pack.name,
+            packType: firstSub.pack.packType,
+            pagesAllowed: firstSub.pagesAllowed,
+            pagesUsed: coveredByPack,
+            packPrice: firstSub.packPrice,
+            subscriptionId: firstSub.id,
+          },
+        });
+      }
+
+      if (breakdown.grandTotal > 0 && (razorpayPaymentId || paymentConfirmed)) {
+        await tx.payment.create({
+          data: {
+            userId,
+            orderId: created.id,
+            razorpayId: razorpayPaymentId || `manual-${orderNumber}`,
+            razorpayOrderId: razorpayOrderId || orderNumber,
+            amount: breakdown.grandTotal,
+            currency: "INR",
+            status: "COMPLETED",
+            description: `Print order payment: ${orderNumber}`,
+          },
+        });
+      }
+
+      return created;
     });
-
-    console.log("Order created:", order.id, orderNumber);
-    console.log("========================================");
 
     return NextResponse.json(
       {
         order,
-        totalCost,
+        breakdown,
         chargeablePages,
-        excessPages,
-        coveredBySub,
-        pageCost,
-        addonCost: totalAddonCost,
-        message: "Order submitted successfully",
+        coveredByPack,
+        isTrialUsed,
+        message: isTrialUsed
+          ? "Free trial order submitted successfully"
+          : "Order submitted successfully",
       },
       { status: 201 }
     );
