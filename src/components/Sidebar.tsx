@@ -99,15 +99,13 @@ export default function Sidebar() {
           z-index: 1101;
           width: 40px;
           height: 40px;
-          border-radius: 10px;
-          border: 1px solid var(--border-glass);
+          border: 1px solid var(--border-primary);
           background: var(--bg-card);
           color: var(--text-primary);
           font-size: 1.2rem;
           cursor: pointer;
           align-items: center;
           justify-content: center;
-          backdrop-filter: blur(12px);
         }
 
         .sidebar-toggle-icon { line-height: 1; }
@@ -121,15 +119,14 @@ export default function Sidebar() {
           display: flex;
           flex-direction: column;
           background: var(--bg-card);
-          border-right: 1px solid var(--border-glass);
-          backdrop-filter: blur(20px);
+          border-right: 1px solid var(--border-primary);
           z-index: 1100;
           transition: transform var(--transition-normal);
         }
 
         .sidebar-header {
           padding: 18px 16px 12px;
-          border-bottom: 1px solid var(--border-glass);
+          border-bottom: 1px solid var(--border-primary);
         }
 
         .sidebar-brand {
@@ -143,15 +140,13 @@ export default function Sidebar() {
         .brand-mark {
           width: 34px;
           height: 34px;
-          border-radius: 10px;
           display: inline-flex;
           align-items: center;
           justify-content: center;
-          background: linear-gradient(135deg, var(--primary-indigo), #6366f1);
+          background: var(--bg-black);
           color: #ffffff;
           font-weight: 900;
           font-size: 0.85rem;
-          box-shadow: 0 8px 20px rgba(139, 92, 246, 0.25);
         }
 
         .brand-name {
@@ -174,7 +169,6 @@ export default function Sidebar() {
           align-items: center;
           gap: 10px;
           padding: 10px 12px;
-          border-radius: 10px;
           color: var(--text-secondary);
           text-decoration: none;
           font-size: 0.88rem;
@@ -183,13 +177,13 @@ export default function Sidebar() {
         }
 
         .sidebar-link:hover {
-          background: rgba(255, 255, 255, 0.06);
+          background: var(--bg-elevated);
           color: var(--text-primary);
         }
 
         .sidebar-link.active {
-          background: rgba(139, 92, 246, 0.14);
-          color: var(--primary-indigo);
+          background: var(--bg-black);
+          color: #fff;
         }
 
         .sidebar-link-icon {
@@ -201,7 +195,7 @@ export default function Sidebar() {
 
         .sidebar-footer {
           padding: 12px 14px;
-          border-top: 1px solid var(--border-glass);
+          border-top: 1px solid var(--border-primary);
           display: flex;
           flex-direction: column;
           gap: 10px;
@@ -225,12 +219,11 @@ export default function Sidebar() {
         .avatar {
           width: 32px;
           height: 32px;
-          border-radius: 50%;
           display: inline-flex;
           align-items: center;
           justify-content: center;
-          background: rgba(34, 211, 238, 0.14);
-          color: var(--accent-cyan);
+          background: var(--bg-black);
+          color: #fff;
           font-weight: 900;
           font-size: 0.8rem;
           flex-shrink: 0;
@@ -242,7 +235,6 @@ export default function Sidebar() {
           inset: 0;
           z-index: 1099;
           background: rgba(0, 0, 0, 0.5);
-          backdrop-filter: blur(4px);
         }
 
         @media (max-width: 1024px) {
@@ -250,18 +242,10 @@ export default function Sidebar() {
         }
 
         @media (max-width: 768px) {
-          .sidebar-toggle { display: flex; }
-
-          .sidebar {
-            transform: translateX(-100%);
-            width: 280px;
-          }
-
-          .sidebar.sidebar-open {
-            transform: translateX(0);
-          }
-
-          .sidebar-overlay { display: block; }
+          .sidebar-toggle { display: flex; z-index: 1201; }
+          .sidebar { transform: translateX(-100%); width: 280px; z-index: 1200; background: var(--bg-card); }
+          .sidebar.sidebar-open { transform: translateX(0); }
+          .sidebar-overlay { display: block; z-index: 1199; }
         }
 
         @media (max-width: 375px) {

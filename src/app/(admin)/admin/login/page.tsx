@@ -93,26 +93,20 @@ export default function AdminLoginPage() {
 
       <style>{`
         .admin-login-page {
-          min-height: 100vh;
+          min-height: 100dvh;
           display: flex;
           align-items: center;
           justify-content: center;
-          background: var(--bg-deep);
+          background: var(--bg-primary);
           padding: 18px;
-        }
-        .admin-login-page::before {
-          content: '';
-          position: fixed;
-          inset: 0;
-          background:
-            radial-gradient(ellipse at 50% 0%, rgba(139, 92, 246, 0.15), transparent 32rem);
-          pointer-events: none;
         }
         .admin-login-card {
           width: min(420px, 100%);
           padding: 32px;
           position: relative;
           z-index: 1;
+          background: var(--bg-card);
+          border: 1px solid var(--border-primary);
         }
         .admin-login-brand {
           display: flex;
@@ -126,15 +120,13 @@ export default function AdminLoginPage() {
         .brand-mark {
           width: 48px;
           height: 48px;
-          border-radius: 14px;
           display: inline-flex;
           align-items: center;
           justify-content: center;
-          background: linear-gradient(135deg, var(--primary-indigo), #6366f1);
+          background: var(--bg-black);
           color: #fff;
           font-weight: 900;
           font-size: 1rem;
-          box-shadow: 0 16px 40px rgba(139, 92, 246, 0.28);
         }
       `}</style>
     </div>

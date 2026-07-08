@@ -129,7 +129,7 @@ export default function AdminPacksPage() {
             </div>
             <div className="plan-actions" style={{ marginTop: "auto", display: "flex", gap: 8 }}>
               <button className="btn btn-secondary w-100" onClick={() => openEdit(pack)} type="button">Edit</button>
-              <button className="btn btn-secondary w-100" onClick={() => handleDelete(pack)} type="button" style={{ color: "var(--accent-red)" }}>Delete</button>
+              <button className="btn btn-secondary w-100" onClick={() => handleDelete(pack)} type="button">Delete</button>
             </div>
           </div>
         ))}
@@ -198,13 +198,14 @@ export default function AdminPacksPage() {
 
       <style>{`
         .plans-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
-        .plan-card { display: flex; flex-direction: column; gap: 12px; }
+        .plan-card { display: flex; flex-direction: column; gap: 12px; padding: 20px; border: 1px solid var(--border-primary); background: var(--bg-card); }
+        .plan-card:active { transform: scale(0.99); }
         .plan-card.inactive { opacity: 0.6; }
         .plan-card-header { display: flex; justify-content: space-between; align-items: flex-start; }
-        .plan-card-header h2 { font-size: 1.1rem; font-weight: 800; }
-        .plan-price { font-size: 2rem; font-weight: 800; }
-        .plan-pages { font-size: 1rem; color: var(--accent-cyan); font-weight: 700; }
-        .plan-type-badge { display: inline-flex; padding: 4px 10px; border-radius: 999px; font-size: 0.75rem; font-weight: 700; background: rgba(139,92,246,0.12); color: var(--primary-indigo); width: fit-content; }
+        .plan-card-header h2 { font-size: 1.1rem; font-weight: 800; font-family: var(--font-serif); letter-spacing: -0.03em; }
+        .plan-price { font-size: 2rem; font-weight: 800; font-family: var(--font-serif-alt); letter-spacing: -0.03em; }
+        .plan-pages { font-size: 1rem; font-weight: 700; font-family: var(--font-mono); }
+        .plan-type-badge { display: inline-flex; padding: 4px 10px; font-size: 0.75rem; font-weight: 700; border: 1px solid var(--border-primary); font-family: var(--font-mono); width: fit-content; text-transform: uppercase; letter-spacing: 0.04em; }
         .plan-features { display: flex; flex-direction: column; gap: 4px; font-size: 0.85rem; color: var(--text-secondary); }
         @media (max-width: 860px) { .plans-grid { grid-template-columns: 1fr; } }
       `}</style>

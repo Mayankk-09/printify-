@@ -15,6 +15,11 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           {children}
         </div>
       </main>
+      <style>{`
+        @media (max-width: 640px) {
+          .admin-layout main { padding: 16px 14px 80px !important; }
+        }
+      `}</style>
     </div>
   );
 }

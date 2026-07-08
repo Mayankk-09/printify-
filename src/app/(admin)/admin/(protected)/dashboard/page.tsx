@@ -112,14 +112,17 @@ export default async function AdminDashboardPage() {
 
       <style>{`
         .ad-stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
-        .ad-stat-card { padding: 20px; display: flex; flex-direction: column; gap: 8px; }
-        .ad-stat-label { color: var(--text-muted); font-size: 0.78rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
-        .ad-stat-value { font-size: 2rem; font-weight: 800; }
+        .ad-stat-card { padding: 20px; display: flex; flex-direction: column; gap: 8px; border: 1px solid var(--border-primary); background: var(--bg-card); }
+        .ad-stat-card:active { transform: scale(0.99); }
+        .ad-stat-label { color: var(--text-muted); font-size: 0.78rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; font-family: var(--font-mono); }
+        .ad-stat-value { font-size: 2rem; font-weight: 800; font-family: var(--font-serif-alt); letter-spacing: -0.03em; }
         .ad-links { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
-        .ad-link-card { padding: 24px; text-decoration: none; display: flex; flex-direction: column; gap: 8px; cursor: pointer; }
-        .ad-link-card:hover { border-color: var(--border-active); }
+        .ad-link-card { padding: 24px; text-decoration: none; display: flex; flex-direction: column; gap: 8px; cursor: pointer; border: 1px solid var(--border-primary); background: var(--bg-card); transition: background var(--transition-fast); }
+        .ad-link-card:hover { background: var(--bg-elevated); }
+        .ad-link-card:active { transform: scale(0.99); }
         .ad-link-card h3 { font-size: 1.1rem; font-weight: 700; }
-        @media (max-width: 860px) { .ad-stats-grid, .ad-links { grid-template-columns: 1fr; } }
+        @media (max-width: 860px) { .ad-stats-grid { grid-template-columns: repeat(2, 1fr); } .ad-links { grid-template-columns: 1fr; } }
+        @media (max-width: 480px) { .ad-stats-grid { grid-template-columns: 1fr; } }
       `}</style>
     </div>
   );

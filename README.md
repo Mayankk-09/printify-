@@ -221,14 +221,14 @@ printify/
 |---|---|---|
 | `DATABASE_URL` | Yes | PostgreSQL connection string (Neon, RDS, or local) |
 | `AUTH_SECRET` | Yes | Encryption secret for NextAuth JWT tokens |
-| `NEXTAUTH_URL` | Yes | Canonical URL of your app (`http://localhost:3000` in dev) |
+| `NEXTAUTH_URL` | Yes | Canonical URL of your app (`http://localhost:4000` in dev) |
 | `AWS_ACCESS_KEY_ID` | No | AWS access key for S3 file storage |
 | `AWS_SECRET_ACCESS_KEY` | No | AWS secret key for S3 file storage |
 | `AWS_REGION` | No | AWS region (e.g. `ap-south-1`) |
 | `AWS_S3_BUCKET_UPLOADS` | No | S3 bucket name for uploaded files |
 | `RAZORPAY_KEY_ID` | No | Razorpay API key ID |
 | `RAZORPAY_KEY_SECRET` | No | Razorpay API key secret |
-| `NEXT_PUBLIC_APP_URL` | Yes | Public URL of your app (`http://localhost:3000` in dev) |
+| `NEXT_PUBLIC_APP_URL` | Yes | Public URL of your app (`http://localhost:4000` in dev) |
 | `RESEND_API_KEY` | No | Resend API key for email notifications |
 
 ### `.env` Template
@@ -239,7 +239,7 @@ DATABASE_URL="postgresql://user:password@host:5432/printify?sslmode=require"
 
 # NextAuth
 AUTH_SECRET="generate-a-random-64-char-string"
-NEXTAUTH_URL="http://localhost:3000"
+NEXTAUTH_URL="http://localhost:4000"
 
 # AWS S3 (optional — falls back to local uploads/)
 AWS_ACCESS_KEY_ID=""
@@ -255,7 +255,7 @@ RAZORPAY_KEY_SECRET=""
 RESEND_API_KEY=""
 
 # App
-NEXT_PUBLIC_APP_URL="http://localhost:3000"
+NEXT_PUBLIC_APP_URL="http://localhost:4000"
 ```
 
 > **Note:** `AUTH_SECRET` should be a cryptographically random string. Generate one with: `openssl rand -base64 64`
@@ -295,7 +295,7 @@ npm run db:seed
 npm run dev
 
 # 7. Open in browser
-open http://localhost:3000
+open http://localhost:4000
 ```
 
 ### Default Credentials
@@ -587,13 +587,13 @@ vercel --prod
 
 ```bash
 # Development
-npm run dev          # Starts Next.js dev server on :3000
+npm run dev          # Starts Next.js dev server on :4000
 
 # Production build
 npm run build        # Generates Prisma client + builds Next.js
 
 # Production serve
-npm run start        # Starts production server on :3000
+npm run start        # Starts production server on :4000
 
 # Type checking
 npm run typecheck    # Runs tsc --noEmit

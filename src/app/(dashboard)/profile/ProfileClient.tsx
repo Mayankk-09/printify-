@@ -75,21 +75,20 @@ export default function ProfileClient({ user, subscription }: { user: { name: st
       <style>{`
         .pf { display: flex; flex-direction: column; gap: 16px; }
         .pf-head { margin-bottom: 4px; }
-        .pf-section-title { font-size: 0.95rem; font-weight: 800; margin-bottom: 12px; }
+        .pf-section-title { font-size: 0.95rem; font-weight: 800; margin-bottom: 12px; font-family: var(--font-serif); letter-spacing: -0.03em; }
         .pf-avatar { display: flex; align-items: center; gap: 16px; margin-bottom: 20px; }
-        .pf-avatar-letter { width: 56px; height: 56px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; background: rgba(34,211,238,0.14); color: var(--accent-cyan); font-weight: 900; font-size: 1.4rem; }
-        .pf-avatar h2 { font-size: 1.1rem; font-weight: 800; }
+        .pf-avatar-letter { width: 56px; height: 56px; display: inline-flex; align-items: center; justify-content: center; background: var(--bg-black); color: #fff; font-weight: 900; font-size: 1.4rem; }
+        .pf-avatar h2 { font-size: 1.1rem; font-weight: 800; font-family: var(--font-serif); letter-spacing: -0.03em; }
         .pf-details { display: flex; flex-direction: column; gap: 12px; }
-        .pf-row { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-glass); padding-bottom: 10px; }
+        .pf-row { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-light); padding-bottom: 10px; }
         .pf-row span { color: var(--text-muted); font-size: 0.85rem; }
         .pf-row strong { color: var(--text-primary); font-size: 0.9rem; }
-        .pf-pack-card { display: flex; flex-direction: column; gap: 10px; border: 1px solid var(--border-active); border-radius: 12px; padding: 14px; background: rgba(139,92,246,0.06); }
+        .pf-pack-card { display: flex; flex-direction: column; gap: 10px; border: 1px solid var(--border-primary); padding: 14px; }
         .pf-pack-name { font-weight: 800; font-size: 1rem; }
         .pf-pack-meta { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
         .pf-pack-stat { display: flex; flex-direction: column; gap: 1px; }
-        .pf-pack-stat span { font-size: 0.68rem; color: var(--text-muted); }
-        .pf-pack-stat strong { font-size: 1.1rem; }
-        .pf-remaining { color: var(--accent-cyan); }
+        .pf-pack-stat span { font-size: 0.68rem; color: var(--text-muted); font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.04em; }
+        .pf-pack-stat strong { font-size: 1.1rem; font-family: var(--font-serif-alt); }
         .pf-no-pack { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
       `}</style>
     </div>

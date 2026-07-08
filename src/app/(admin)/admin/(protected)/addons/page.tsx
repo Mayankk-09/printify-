@@ -100,49 +100,92 @@ export default function AdminAddonsPage() {
       </div>
 
       <div className="glass-card">
-        <div className="table-responsive">
-          <table className="modern-table">
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Description</th>
-                <th>Price</th>
-                <th>Order</th>
-                <th>Status</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {addons.map((addon) => (
-                <tr key={addon.id}>
-                  <td><strong>{addon.name}</strong></td>
-                  <td><span className="text-secondary text-sm">{addon.description || "-"}</span></td>
-                  <td>{addon.price === 0 ? "FREE" : `₹${(addon.price / 100).toFixed(2)}`}</td>
-                  <td>{addon.displayOrder}</td>
-                  <td>
-                    <span className={`status-badge ${addon.active ? "status-READY" : "status-SUBMITTED"}`}>
-                      {addon.active ? "Active" : "Inactive"}
-                    </span>
-                  </td>
-                  <td>
-                    <div style={{ display: "flex", gap: 8 }}>
-                      <button className="btn btn-secondary btn-sm" onClick={() => openEdit(addon)} type="button">Edit</button>
-                      <button className="btn btn-secondary btn-sm" onClick={() => handleDelete(addon)} type="button" style={{ color: "var(--accent-red)" }}>Delete</button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-              {!addons.length && (
+        {/* Desktop table */}
+        <div className="aa-table-wrap">
+          <div className="table-responsive">
+            <table className="modern-table">
+              <thead>
                 <tr>
-                  <td colSpan={6}>
-                    <div className="empty-state compact"><p>No add-ons yet.</p></div>
-                  </td>
+                  <th>Name</th>
+                  <th>Description</th>
+                  <th>Price</th>
+                  <th>Order</th>
+                  <th>Status</th>
+                  <th>Actions</th>
                 </tr>
-              )}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {addons.map((addon) => (
+                  <tr key={addon.id}>
+                    <td><strong>{addon.name}</strong></td>
+                    <td><span className="text-secondary text-sm">{addon.description || "-"}</span></td>
+                    <td>{addon.price === 0 ? "FREE" : `₹${(addon.price / 100).toFixed(2)}`}</td>
+                    <td>{addon.displayOrder}</td>
+                    <td>
+                      <span className={`status-badge ${addon.active ? "status-READY" : "status-SUBMITTED"}`}>
+                        {addon.active ? "Active" : "Inactive"}
+                      </span>
+                    </td>
+                    <td>
+                      <div style={{ display: "flex", gap: 8 }}>
+                        <button className="btn btn-secondary btn-sm" onClick={() => openEdit(addon)} type="button">Edit</button>
+                        <button className="btn btn-secondary btn-sm" onClick={() => handleDelete(addon)} type="button">Delete</button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                {!addons.length && (
+                  <tr>
+                    <td colSpan={6}>
+                      <div className="empty-state compact"><p>No add-ons yet.</p></div>
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Mobile cards */}
+        <div className="aa-mobile-cards">
+          {addons.length === 0 ? (
+            <div className="empty-state compact"><p>No add-ons yet.</p></div>
+          ) : (
+            addons.map((addon) => (
+              <div key={addon.id} className="glass-card aa-mobile-card">
+                <div className="aa-mc-head">
+                  <strong>{addon.name}</strong>
+                  <span className={`status-badge ${addon.active ? "status-READY" : "status-SUBMITTED"}`}>
+                    {addon.active ? "Active" : "Inactive"}
+                  </span>
+                </div>
+                <div className="aa-mc-body">
+                  <div className="aa-mc-row"><span>Description</span><span>{addon.description || "-"}</span></div>
+                  <div className="aa-mc-row"><span>Price</span><strong>{addon.price === 0 ? "FREE" : `₹${(addon.price / 100).toFixed(2)}`}</strong></div>
+                  <div className="aa-mc-row"><span>Order</span><span>{addon.displayOrder}</span></div>
+                </div>
+                <div className="aa-mc-actions">
+                  <button className="btn btn-secondary btn-sm w-100" onClick={() => openEdit(addon)} type="button">Edit</button>
+                  <button className="btn btn-secondary btn-sm w-100" onClick={() => handleDelete(addon)} type="button">Delete</button>
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </div>
+
+      <style>{`
+        .aa-mobile-cards { display: none; flex-direction: column; gap: 12px; }
+        .aa-mobile-card { padding: 16px; border: 1px solid var(--border-primary); background: var(--bg-card); }
+        .aa-mobile-card:active { transform: scale(0.99); }
+        .aa-mc-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 10px; }
+        .aa-mc-body { display: grid; gap: 6px; }
+        .aa-mc-row { display: flex; justify-content: space-between; gap: 8px; font-size: 0.82rem; border-bottom: 1px solid var(--border-light); padding-bottom: 6px; }
+        .aa-mc-row span:first-child { color: var(--text-muted); }
+        .aa-mc-row strong { font-family: var(--font-mono); }
+        .aa-mc-actions { display: flex; gap: 8px; margin-top: 8px; }
+        @media (max-width: 768px) { .aa-table-wrap { display: none; } .aa-mobile-cards { display: flex; } }
+      `}</style>
 
       {showForm && (
         <div className="modal-backdrop">

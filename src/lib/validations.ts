@@ -10,6 +10,7 @@ export const registerSchema = z.object({
   email: z.string().email("Invalid email address"),
   phone: z.string().min(10, "Invalid phone number"),
   password: z.string().min(6, "Password must be at least 6 characters"),
+  otp: z.string().length(6, "OTP must be 6 digits"),
 });
 
 export const packSchema = z.object({

@@ -71,48 +71,75 @@ export default function HistoryOrdersClient({ orders: initialOrders }: { orders:
         </div>
 
         {filteredOrders.length ? (
-          <div className="table-responsive">
-            <table className="modern-table">
-              <thead>
-                <tr>
-                  <th>Document</th>
-                  <th>Pages</th>
-                  <th>Copies</th>
-                  <th>Type</th>
-                  <th>Pickup slot</th>
-                  <th>Ordered</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredOrders.map((o: any) => (
-                  <tr key={o.id}>
-                    <td>
-                      <a href={o.filePath} target="_blank" rel="noopener noreferrer">
-                        {o.fileName}
-                      </a>
-                    </td>
-                    <td>{o.pages}</td>
-                    <td>{o.copies}</td>
-                    <td>
-                      <small>{o.printMode === "COLOR" ? "Color" : "B&W"} / {o.printSide === "DOUBLE" ? "Double" : "Single"}</small>
-                    </td>
-                    <td>
-                      <small>{getSlotLabel(o.pickupSlot) || "—"}</small>
-                    </td>
-                    <td>
-                      <small>{formatDate(o.createdAt)}</small>
-                    </td>
-                    <td>
-                      <span className={`status-badge status-${o.status}`}>
-                        {statusLabels[o.status] || o.status}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <>
+            {/* Desktop table */}
+            <div className="ho-table-wrap">
+              <div className="table-responsive">
+                <table className="modern-table">
+                  <thead>
+                    <tr>
+                      <th>Document</th>
+                      <th>Pages</th>
+                      <th>Copies</th>
+                      <th>Type</th>
+                      <th>Pickup slot</th>
+                      <th>Ordered</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredOrders.map((o: any) => (
+                      <tr key={o.id}>
+                        <td>
+                          <a href={o.filePath} target="_blank" rel="noopener noreferrer">
+                            {o.fileName}
+                          </a>
+                        </td>
+                        <td>{o.pages}</td>
+                        <td>{o.copies}</td>
+                        <td>
+                          <small>{o.printMode === "COLOR" ? "Color" : "B&W"} / {o.printSide === "DOUBLE" ? "Double" : "Single"}</small>
+                        </td>
+                        <td>
+                          <small>{getSlotLabel(o.pickupSlot) || "—"}</small>
+                        </td>
+                        <td>
+                          <small>{formatDate(o.createdAt)}</small>
+                        </td>
+                        <td>
+                          <span className={`status-badge status-${o.status}`}>
+                            {statusLabels[o.status] || o.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Mobile cards */}
+            <div className="ho-mobile-cards">
+              {filteredOrders.map((o: any) => (
+                <div key={o.id} className="glass-card ho-mobile-card">
+                  <div className="ho-mc-head">
+                    <div>
+                      <strong>{o.fileName}</strong>
+                      <span className="text-muted text-sm">{o.pages}p × {o.copies}c</span>
+                    </div>
+                    <span className={`status-badge status-${o.status}`}>
+                      {statusLabels[o.status] || o.status}
+                    </span>
+                  </div>
+                  <div className="ho-mc-body">
+                    <div className="ho-mc-row"><span>Type</span><span>{o.printMode === "COLOR" ? "Color" : "B&W"} / {o.printSide === "DOUBLE" ? "Double" : "Single"}</span></div>
+                    <div className="ho-mc-row"><span>Pickup</span><span>{getSlotLabel(o.pickupSlot) || "—"}</span></div>
+                    <div className="ho-mc-row"><span>Ordered</span><span>{formatDate(o.createdAt)}</span></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
         ) : (
           <div className="empty-state">
             <div className="empty-state-icon">📄</div>
@@ -127,7 +154,15 @@ export default function HistoryOrdersClient({ orders: initialOrders }: { orders:
         .ho-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
         .ho-head p { margin-top: 4px; }
         .ho-filters { display: grid; grid-template-columns: 1fr 140px 160px; gap: 10px; margin-bottom: 16px; }
-        @media (max-width: 768px) { .ho-filters { grid-template-columns: 1fr; } }
+        .ho-mobile-cards { display: none; flex-direction: column; gap: 12px; }
+        .ho-mobile-card { padding: 16px; border: 1px solid var(--border-primary); background: var(--bg-card); }
+        .ho-mobile-card:active { transform: scale(0.99); }
+        .ho-mc-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 10px; }
+        .ho-mc-head div { display: flex; flex-direction: column; }
+        .ho-mc-body { display: grid; gap: 6px; }
+        .ho-mc-row { display: flex; justify-content: space-between; gap: 8px; font-size: 0.82rem; border-bottom: 1px solid var(--border-light); padding-bottom: 6px; }
+        .ho-mc-row span:first-child { color: var(--text-muted); }
+        @media (max-width: 768px) { .ho-filters { grid-template-columns: 1fr; } .ho-table-wrap { display: none; } .ho-mobile-cards { display: flex; } }
         @media (max-width: 375px) { .ho-head { flex-direction: column; } }
       `}</style>
     </div>

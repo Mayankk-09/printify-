@@ -250,34 +250,35 @@ export default function SubscribePage() {
         .pp { display: flex; flex-direction: column; gap: 16px; }
         .pp-header { display: flex; justify-content: space-between; gap: 16px; align-items: stretch; }
         .pp-header p { margin-top: 4px; }
-        .pp-balance { min-width: 200px; display: flex; flex-direction: column; gap: 4px; justify-content: center; align-items: center; }
-        .pp-balance-num { font-size: 2.2rem; line-height: 1; font-weight: 800; }
-        .pp-trial-card { display: flex; align-items: center; gap: 16px; border-color: rgba(34,211,238,0.2); background: rgba(34,211,238,0.04); }
+        .pp-balance { min-width: 200px; display: flex; flex-direction: column; gap: 4px; justify-content: center; align-items: center; border: 1px solid var(--border-primary); background: var(--bg-card); padding: 20px; }
+        .pp-balance-num { font-size: 2.2rem; line-height: 1; font-weight: 800; font-family: var(--font-serif-alt); letter-spacing: -0.03em; }
+        .pp-trial-card { display: flex; align-items: center; gap: 16px; border: 2px dashed var(--border-primary); background: var(--bg-card); padding: 20px; }
         .pp-trial-info { flex: 1; }
-        .pp-trial-info h2 { font-size: 1rem; font-weight: 800; }
+        .pp-trial-info h2 { font-size: 1rem; font-weight: 800; font-family: var(--font-serif); }
         .pp-trial-icon { font-size: 2rem; flex-shrink: 0; }
-        .pp-trial-rules { list-style: none; padding: 0; margin: 8px 0 0; display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 0.78rem; color: var(--text-secondary); }
-        .pp-trial-rules li::before { content: "•"; margin-right: 4px; color: var(--accent-cyan); }
+        .pp-trial-rules { list-style: none; padding: 0; margin: 8px 0 0; display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 0.78rem; color: var(--text-secondary); font-family: var(--font-mono); }
+        .pp-trial-rules li::before { content: "•"; margin-right: 4px; }
         .pp-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
-        .pp-card { position: relative; display: flex; flex-direction: column; gap: 10px; overflow: hidden; }
-        .pp-card.best-value { border-color: rgba(251,191,36,0.3); background: rgba(251,191,36,0.04); }
-        .pp-badge { position: absolute; top: 12px; right: 12px; background: linear-gradient(135deg, #f59e0b, #fbbf24); color: #000; border-radius: 999px; padding: 4px 10px; font-size: 0.65rem; font-weight: 800; }
-        .pp-name { font-size: 1.25rem; font-weight: 800; padding-right: 80px; }
+        .pp-card { position: relative; display: flex; flex-direction: column; gap: 10px; overflow: hidden; padding: 20px; border: 1px solid var(--border-primary); background: var(--bg-card); }
+        .pp-card:active { transform: scale(0.99); }
+        .pp-card.best-value { border-width: 2px; }
+        .pp-badge { position: absolute; top: 12px; right: 12px; background: var(--bg-black); color: #fff; padding: 4px 10px; font-size: 0.65rem; font-weight: 800; font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.06em; }
+        .pp-name { font-size: 1.25rem; font-weight: 800; padding-right: 80px; font-family: var(--font-serif); letter-spacing: -0.03em; }
         .pp-desc { font-size: 0.85rem; }
         .pp-price { display: flex; align-items: baseline; gap: 3px; }
-        .pp-price strong { font-size: 2.4rem; line-height: 1; font-weight: 800; }
+        .pp-price strong { font-size: 2.4rem; line-height: 1; font-weight: 800; font-family: var(--font-serif-alt); letter-spacing: -0.03em; }
         .pp-price span { font-size: 0.85rem; font-weight: 600; }
-        .pp-pages { border: 1px solid var(--border-glass); border-radius: 12px; background: rgba(255,255,255,0.04); padding: 12px; display: flex; justify-content: space-between; align-items: center; }
-        .pp-pages strong { font-size: 1.3rem; }
+        .pp-pages { border: 1px solid var(--border-light); padding: 12px; display: flex; justify-content: space-between; align-items: center; }
+        .pp-pages strong { font-size: 1.3rem; font-family: var(--font-serif-alt); }
         .pp-pages span { font-size: 0.8rem; font-weight: 600; }
-        .pp-per-page { font-size: 0.78rem; color: var(--text-muted); font-weight: 600; text-align: center; }
-        .pp-print-mode { font-size: 0.75rem; color: var(--text-muted); font-weight: 600; text-align: center; border-top: 1px solid var(--border-glass); padding-top: 6px; }
+        .pp-per-page { font-size: 0.78rem; color: var(--text-muted); font-weight: 600; text-align: center; font-family: var(--font-mono); }
+        .pp-print-mode { font-size: 0.75rem; color: var(--text-muted); font-weight: 600; text-align: center; border-top: 1px solid var(--border-light); padding-top: 6px; font-family: var(--font-mono); }
         .pp-modal-preview { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px; }
-        .pp-modal-preview div { border: 1px solid var(--border-glass); border-radius: 12px; background: rgba(255,255,255,0.04); padding: 12px; display: flex; flex-direction: column; gap: 4px; }
-        .pp-modal-preview strong { font-size: 1.2rem; }
+        .pp-modal-preview div { border: 1px solid var(--border-light); padding: 12px; display: flex; flex-direction: column; gap: 4px; }
+        .pp-modal-preview strong { font-size: 1.2rem; font-family: var(--font-serif-alt); }
         .trial-confetti { font-size: 4rem; margin-bottom: 12px; animation: bounce 0.5s ease; }
         @keyframes bounce { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.2); } }
-        @media (max-width: 900px) { .pp-header, .pp-grid { grid-template-columns: 1fr; } .pp-header { flex-direction: column; } }
+        @media (max-width: 900px) { .pp-header, .pp-grid { grid-template-columns: 1fr; } .pp-header { flex-direction: column; } .pp-name { font-family: var(--font-serif); } .pp-balance-num { font-family: var(--font-serif-alt); } .pp-trial-info h2 { font-family: var(--font-serif); } .pp-trial-card { flex-direction: column; text-align: center; align-items: center; } .pp-trial-card .btn { width: 100%; } .pp-trial-rules { justify-content: center; } .pp { overflow-x: hidden; } }
         @media (max-width: 640px) { .pp-modal-preview { grid-template-columns: 1fr; } }
       `}</style>
     </div>

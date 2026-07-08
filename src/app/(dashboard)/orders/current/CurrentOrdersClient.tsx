@@ -226,54 +226,48 @@ export default function CurrentOrdersClient({ orders: initialOrders }: { orders:
         .co-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
         .co-head p { margin-top: 4px; }
         .co-status-bar { display: flex; gap: 10px; flex-wrap: wrap; }
-        .co-status-chip { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--border-glass); border-radius: 999px; padding: 6px 12px; background: rgba(255,255,255,0.04); font-size: 0.82rem; }
-        .co-status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--chip-color, #94a3b8); }
+        .co-status-chip { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--border-primary); padding: 6px 12px; background: var(--bg-card); font-size: 0.82rem; }
         .co-status-label { font-weight: 600; color: var(--text-primary); }
         .co-status-count { font-weight: 800; color: var(--text-muted); font-size: 0.82rem; }
         .co-filters { display: grid; grid-template-columns: 1fr 140px 160px; gap: 10px; margin-bottom: 16px; }
-        .co-code { font-family: monospace; font-weight: 700; font-size: 0.85rem; letter-spacing: 0.04em; color: var(--accent-cyan); }
+        .co-code { font-family: var(--font-mono); font-weight: 700; font-size: 0.85rem; letter-spacing: 0.06em; }
 
         .co-orders-list { display: flex; flex-direction: column; gap: 8px; }
-        .co-order-card { padding: 0; overflow: hidden; border: 1px solid var(--border-glass); }
+        .co-order-card { padding: 0; overflow: hidden; border: 1px solid var(--border-primary); background: var(--bg-card); }
         .co-order-header { display: flex; justify-content: space-between; align-items: center; padding: 14px 16px; cursor: pointer; transition: background var(--transition-fast); }
-        .co-order-header:hover { background: rgba(255,255,255,0.04); }
+        .co-order-header:hover { background: var(--bg-elevated); }
+        .co-order-header:active { transform: scale(0.99); }
         .co-order-info { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
         .co-order-name { font-size: 0.92rem; font-weight: 700; word-break: break-word; }
         .co-order-meta { display: flex; gap: 12px; font-size: 0.78rem; color: var(--text-muted); }
         .co-order-right { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
         .co-expand-icon { color: var(--text-muted); font-size: 0.75rem; }
-        .co-order-body { border-top: 1px solid var(--border-glass); padding: 16px; }
+        .co-order-body { border-top: 1px solid var(--border-light); padding: 16px; }
         .co-order-details { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 16px; }
         .co-detail-row { display: flex; flex-direction: column; gap: 2px; }
-        .co-detail-row span { color: var(--text-muted); font-size: 0.72rem; }
+        .co-detail-row span { color: var(--text-muted); font-size: 0.72rem; font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.04em; }
         .co-detail-row strong { font-size: 0.85rem; }
 
         .co-timeline { display: flex; flex-direction: column; gap: 0; }
         .co-tl-step { display: flex; gap: 14px; }
         .co-tl-line { display: flex; flex-direction: column; align-items: center; width: 28px; flex-shrink: 0; }
-        .co-tl-dot { width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.65rem; font-weight: 800; flex-shrink: 0; z-index: 1; }
-        .co-tl-dot.dot-completed { background: rgba(52,211,153,0.18); color: #34d399; border: 2px solid #34d399; }
-        .co-tl-dot.dot-current { background: rgba(139,92,246,0.2); color: var(--primary-indigo); border: 2px solid var(--primary-indigo); box-shadow: 0 0 12px rgba(139,92,246,0.5), 0 0 24px rgba(139,92,246,0.25); animation: tl-glow 1.5s ease-in-out infinite alternate; }
-        .co-tl-dot.dot-future { background: rgba(255,255,255,0.05); color: var(--text-muted); border: 2px solid var(--border-glass); }
-        .co-tl-connector { width: 2px; flex: 1; min-height: 24px; background: var(--border-glass); margin: 2px 0; }
-        .co-tl-connector.connector-done { background: #34d399; }
+        .co-tl-dot { width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; font-size: 0.65rem; font-weight: 800; flex-shrink: 0; z-index: 1; }
+        .co-tl-dot.dot-completed { background: var(--bg-black); color: #fff; border: 2px solid var(--bg-black); }
+        .co-tl-dot.dot-current { background: #fff; color: #000; border: 2px solid var(--bg-black); outline: 3px solid var(--border-light); outline-offset: 2px; }
+        .co-tl-dot.dot-future { background: var(--bg-card); color: var(--text-muted); border: 2px solid var(--border-light); }
+        .co-tl-connector { width: 2px; flex: 1; min-height: 24px; background: var(--border-light); margin: 2px 0; }
+        .co-tl-connector.connector-done { background: var(--bg-black); }
         .co-tl-content { padding-bottom: 16px; flex: 1; }
         .co-tl-content strong { font-size: 0.82rem; display: block; margin-bottom: 1px; }
         .co-tl-content p { font-size: 0.72rem; color: var(--text-muted); margin: 0; }
-        .co-tl-time { font-size: 0.65rem; color: var(--text-secondary); display: block; margin-top: 2px; }
+        .co-tl-time { font-size: 0.65rem; color: var(--text-secondary); display: block; margin-top: 2px; font-family: var(--font-mono); }
         .co-tl-step.future .co-tl-content { opacity: 0.4; }
-        .co-tl-step.current .co-tl-content strong { color: var(--primary-indigo); }
-
-        @keyframes tl-glow {
-          from { box-shadow: 0 0 8px rgba(139,92,246,0.4), 0 0 16px rgba(139,92,246,0.2); }
-          to { box-shadow: 0 0 16px rgba(139,92,246,0.6), 0 0 32px rgba(139,92,246,0.3); }
-        }
+        .co-tl-step.current .co-tl-content strong { }
 
         @media (max-width: 768px) {
           .co-filters { grid-template-columns: 1fr; }
           .co-head { flex-direction: column; }
           .co-status-bar { gap: 6px; }
-          .co-status-chip { font-size: 0.75rem; padding: 4px 10px; }
           .co-order-details { grid-template-columns: 1fr; }
         }
         @media (max-width: 375px) {

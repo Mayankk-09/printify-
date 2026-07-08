@@ -357,25 +357,34 @@ export default function AdminOrdersClient() {
                   <span>{formatDate(o.createdAt)}</span>
                 </div>
               </div>
+              <div className="ao-mc-pickup">
+                <span className="ao-mc-pickup-label">Pickup code</span>
+                <strong className="ao-mc-pickup-code">{getPickupCode(o)}</strong>
+              </div>
               <div className="ao-mc-actions">
                 {o.status === "SUBMITTED" && (
                   <button className="btn btn-primary btn-sm w-100" type="button" onClick={() => updateStatus(o)}>
-                    Accept
+                    ✓ Accept
                   </button>
                 )}
                 {o.status === "ACCEPTED" && (
                   <button className="btn btn-secondary btn-sm w-100" type="button" onClick={() => updateStatus(o)}>
-                    Mark Printing
+                    ▶ Printing
                   </button>
                 )}
                 {o.status === "PRINTING" && (
                   <button className="btn btn-secondary btn-sm w-100" type="button" onClick={() => updateStatus(o)}>
-                    Mark Ready
+                    📦 Ready
                   </button>
                 )}
                 {o.status === "READY" && (
                   <button className="btn btn-secondary btn-sm w-100" type="button" onClick={() => updateStatus(o)}>
-                    Mark Collected
+                    ✓ Collect
+                  </button>
+                )}
+                {o.status !== "COLLECTED" && o.status !== "CANCELLED" && (
+                  <button className="btn btn-ghost btn-sm ao-cancel" type="button" onClick={() => updateStatus(o, "CANCELLED")} style={{ position: "absolute", top: 8, right: 8, minHeight: "auto", padding: "2px 8px", fontSize: "0.7rem" }}>
+                    ✕ Cancel
                   </button>
                 )}
               </div>
@@ -501,47 +510,50 @@ export default function AdminOrdersClient() {
         .ao-filter-toggle { flex-shrink: 0; }
 
         .ao-queue { display: flex; flex-wrap: wrap; gap: 8px; }
-        .ao-queue-chip { display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--border-glass); border-radius: 999px; padding: 4px 8px 4px 4px; background: transparent; color: var(--text-primary); cursor: pointer; font: inherit; transition: border-color var(--transition-fast), background var(--transition-fast); }
-        .ao-queue-chip:hover { border-color: var(--border-hover); background: rgba(255,255,255,0.06); }
-        .ao-queue-chip.active { border-color: var(--border-active); background: rgba(139,92,246,0.1); }
-        .ao-queue-count { font-weight: 800; font-size: 0.85rem; min-width: 18px; text-align: center; }
+        .ao-queue-chip { display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--border-light); padding: 4px 8px 4px 4px; background: transparent; color: var(--text-primary); cursor: pointer; font: inherit; transition: border-color var(--transition-fast), background var(--transition-fast); }
+        .ao-queue-chip:hover { border-color: var(--border-secondary); background: var(--bg-elevated); }
+        .ao-queue-chip.active { border-color: var(--border-primary); background: var(--bg-black); color: #fff; }
+        .ao-queue-chip.active .ao-queue-count { color: rgba(255,255,255,0.7); }
+        .ao-queue-count { font-weight: 800; font-size: 0.85rem; min-width: 18px; text-align: center; font-family: var(--font-mono); }
 
         .ao-filters-panel { overflow: hidden; max-height: 0; transition: max-height 0.3s ease; }
         .ao-filters-panel.open { max-height: 600px; }
-        .ao-filters-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; padding: 16px; background: var(--bg-card); border: 1px solid var(--border-glass); border-radius: var(--radius-lg); }
+        .ao-filters-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; padding: 16px; background: var(--bg-card); border: 1px solid var(--border-primary); }
         .ao-filters-grid .form-group { margin-bottom: 0; }
 
         .ao-table-wrap { display: block; }
         .ao-table-card { padding: 0; overflow: hidden; }
         .ao-table-card .modern-table th, .ao-table-card .modern-table td { padding: 10px 8px; white-space: nowrap; }
-        .ao-order-num { font-family: monospace; font-size: 0.82rem; letter-spacing: 0.03em; }
+        .ao-order-num { font-family: var(--font-mono); font-size: 0.82rem; letter-spacing: 0.03em; }
         .ao-actions { display: flex; gap: 4px; align-items: center; flex-wrap: nowrap; }
         .ao-actions .btn-sm { min-height: 28px; padding: 4px 8px; font-size: 0.72rem; }
-        .ao-cancel { color: var(--accent-red) !important; opacity: 0.5; }
+        .ao-cancel { opacity: 0.5; }
         .ao-cancel:hover { opacity: 1; }
-
-        .ao-plan-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; }
-        .ao-plan-dot.has-plan { background: var(--accent-green); }
-        .ao-plan-dot.no-plan { background: var(--text-muted); }
 
         .ao-mobile-cards { display: none; }
 
-        .ao-mobile-card { display: flex; flex-direction: column; gap: 8px; }
+        .ao-mobile-card { display: flex; flex-direction: column; gap: 8px; position: relative; padding: 16px; border: 1px solid var(--border-primary); background: var(--bg-card); }
+        .ao-mobile-card:active { transform: scale(0.99); }
         .ao-mc-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
         .ao-mc-body { display: grid; gap: 6px; }
-        .ao-mc-row { display: flex; justify-content: space-between; gap: 8px; font-size: 0.82rem; border-bottom: 1px solid var(--border-glass); padding-bottom: 6px; }
+        .ao-mc-row { display: flex; justify-content: space-between; gap: 8px; font-size: 0.82rem; border-bottom: 1px solid var(--border-light); padding-bottom: 6px; }
         .ao-mc-row span:first-child { color: var(--text-muted); }
+        .ao-mc-row strong { font-family: var(--font-mono); font-size: 0.85rem; }
+        .ao-mc-pickup { display: flex; align-items: center; justify-content: space-between; gap: 8px; border: 1px solid var(--border-light); padding: 8px 12px; }
+        .ao-mc-pickup-label { font-size: 0.72rem; color: var(--text-muted); font-weight: 600; font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.04em; }
+        .ao-mc-pickup-code { font-family: var(--font-mono); font-size: 1.1rem; font-weight: 900; letter-spacing: 0.08em; }
         .ao-mc-actions { display: flex; gap: 8px; margin-top: 4px; }
 
-        .ao-detail-modal { max-width: 560px; }
+        .ao-detail-modal { max-width: 560px; background: var(--bg-card); border: 1px solid var(--border-primary); padding: 24px; }
         .ao-detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 16px 0; }
         .ao-detail-section { display: flex; flex-direction: column; gap: 4px; }
-        .ao-detail-section h3 { font-size: 0.72rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px; }
+        .ao-detail-section h3 { font-size: 0.72rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px; font-family: var(--font-mono); }
         .ao-detail-section p { font-size: 0.85rem; }
-        .ao-pickup-code { color: var(--accent-cyan); font-weight: 700; font-family: monospace; letter-spacing: 0.04em; }
-        .ao-detail-actions { display: flex; gap: 10px; justify-content: flex-end; border-top: 1px solid var(--border-glass); padding-top: 16px; }
+        .ao-pickup-code { font-weight: 700; font-family: var(--font-mono); letter-spacing: 0.04em; }
+        .ao-detail-actions { display: flex; gap: 10px; justify-content: flex-end; border-top: 1px solid var(--border-light); padding-top: 16px; }
+        .ao-page-edit strong { font-family: var(--font-mono); }
 
-        .btn-sm { min-height: 30px; padding: 5px 10px; border-radius: 8px; font-size: 0.78rem; }
+        .btn-sm { min-height: 30px; padding: 5px 10px; font-size: 0.78rem; }
 
         @media (max-width: 1100px) {
           .ao-filters-grid { grid-template-columns: repeat(3, 1fr); }

@@ -4,7 +4,7 @@
 // Usage: node e2e-test.js
 // ============================================================
 
-const BASE = 'http://localhost:3000';
+const BASE = 'http://localhost:4000';
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 

@@ -4,9 +4,9 @@
   "description": "Production-ready campus printing platform",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev -p 4000",
     "build": "npx prisma generate && next build",
-    "start": "next start",
+    "start": "next start -p 4000",
     "postinstall": "npx prisma generate",
     "db:generate": "npx prisma generate",
     "db:push": "npx prisma db push",

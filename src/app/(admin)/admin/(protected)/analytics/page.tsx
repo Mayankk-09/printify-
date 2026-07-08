@@ -89,14 +89,15 @@ export default async function AdminAnalyticsPage() {
 
       <style>{`
         .ad-stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
-        .ad-stat-card { padding: 20px; display: flex; flex-direction: column; gap: 8px; }
-        .ad-stat-label { color: var(--text-muted); font-size: 0.78rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
-        .ad-stat-value { font-size: 2rem; font-weight: 800; }
+        .ad-stat-card { padding: 20px; display: flex; flex-direction: column; gap: 8px; border: 1px solid var(--border-primary); background: var(--bg-card); }
+        .ad-stat-label { color: var(--text-muted); font-size: 0.78rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; font-family: var(--font-mono); }
+        .ad-stat-value { font-size: 2rem; font-weight: 800; font-family: var(--font-serif-alt); letter-spacing: -0.03em; }
         .ad-analytics-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
-        .ad-section-title { font-size: 1rem; font-weight: 800; margin-bottom: 12px; }
+        .ad-section-title { font-size: 1rem; font-weight: 800; margin-bottom: 12px; font-family: var(--font-serif); letter-spacing: -0.03em; }
         .ad-bar-list { display: grid; gap: 10px; }
-        .ad-bar-list div { display: flex; justify-content: space-between; gap: 10px; border-bottom: 1px solid var(--border-glass); padding-bottom: 10px; }
+        .ad-bar-list div { display: flex; justify-content: space-between; gap: 10px; border-bottom: 1px solid var(--border-light); padding-bottom: 10px; }
         .ad-bar-list span { color: var(--text-muted); font-size: 0.82rem; }
+        .ad-bar-list strong { font-family: var(--font-mono); }
         @media (max-width: 860px) { .ad-stats-grid, .ad-analytics-grid { grid-template-columns: 1fr; } }
       `}</style>
     </div>

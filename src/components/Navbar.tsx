@@ -86,9 +86,8 @@ export default function Navbar() {
           position: sticky;
           top: 0;
           z-index: 1000;
-          border-bottom: 1px solid var(--border-glass);
-          background: rgba(7, 11, 20, 0.82);
-          backdrop-filter: blur(20px);
+          border-bottom: 1px solid var(--border-primary);
+          background: var(--bg-card);
         }
 
         .navbar-inner {
@@ -117,15 +116,13 @@ export default function Navbar() {
         .brand-mark {
           width: 34px;
           height: 34px;
-          border-radius: 10px;
           display: inline-flex;
           align-items: center;
           justify-content: center;
-          background: linear-gradient(135deg, var(--primary-indigo), #6366f1);
+          background: var(--bg-black);
           color: #ffffff;
           font-weight: 900;
           font-size: 0.85rem;
-          box-shadow: 0 8px 20px rgba(139, 92, 246, 0.25);
         }
 
         .brand-name {
@@ -139,14 +136,13 @@ export default function Navbar() {
           align-items: center;
           gap: 4px;
           padding: 4px;
-          border: 1px solid var(--border-glass);
-          border-radius: 12px;
-          background: rgba(255, 255, 255, 0.04);
+          border: 1px solid var(--border-primary);
+          background: var(--bg-elevated);
         }
 
         .nav-btn {
           border: 0;
-          border-radius: 9px;
+          border-radius: 0;
           background: transparent;
           color: var(--text-secondary);
           cursor: pointer;
@@ -159,8 +155,8 @@ export default function Navbar() {
 
         .nav-btn.active,
         .nav-btn:hover {
-          background: rgba(255, 255, 255, 0.09);
-          color: var(--text-primary);
+          background: var(--bg-black);
+          color: #fff;
         }
 
         .nav-actions { display: flex; align-items: center; gap: 10px; }
@@ -169,34 +165,31 @@ export default function Navbar() {
           display: flex;
           align-items: center;
           gap: 8px;
-          border: 1px solid var(--border-glass);
-          border-radius: 10px;
-          background: rgba(255, 255, 255, 0.04);
+          border: 1px solid var(--border-primary);
+          background: var(--bg-elevated);
           padding: 6px 12px;
         }
 
-        .pages-count { font-weight: 800; font-size: 0.9rem; color: var(--accent-cyan); }
+        .pages-count { font-weight: 800; font-size: 0.9rem; }
         .pages-label { font-size: 0.75rem; color: var(--text-muted); font-weight: 600; }
 
         .user-chip {
           display: flex;
           align-items: center;
           gap: 8px;
-          border: 1px solid var(--border-glass);
-          border-radius: 10px;
-          background: rgba(255, 255, 255, 0.04);
+          border: 1px solid var(--border-primary);
+          background: var(--bg-elevated);
           padding: 6px 10px;
         }
 
         .avatar {
           width: 28px;
           height: 28px;
-          border-radius: 50%;
           display: inline-flex;
           align-items: center;
           justify-content: center;
-          background: rgba(34, 211, 238, 0.14);
-          color: var(--accent-cyan);
+          background: var(--bg-black);
+          color: #fff;
           font-weight: 900;
           font-size: 0.75rem;
           flex-shrink: 0;
@@ -206,7 +199,7 @@ export default function Navbar() {
         .user-info strong { font-size: 0.82rem; font-weight: 700; color: var(--text-primary); }
         .user-info small { font-size: 0.68rem; color: var(--text-muted); text-transform: capitalize; }
 
-        .btn-sm { min-height: 32px; padding: 6px 12px; border-radius: 9px; font-size: 0.78rem; }
+        .btn-sm { min-height: 32px; padding: 6px 12px; font-size: 0.78rem; }
         .nav-tagline { color: var(--text-muted); font-size: 0.85rem; font-weight: 500; }
 
         @media (max-width: 860px) {
