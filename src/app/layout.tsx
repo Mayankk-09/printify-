@@ -1,8 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { Toaster } from "react-hot-toast";
-import { SessionProvider } from "next-auth/react";
-import { auth } from "@/lib/auth";
 import SplashScreen from "@/components/SplashScreen";
 import PwaPrompt from "@/components/PwaPrompt";
 
@@ -17,13 +15,11 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
-export default async function RootLayout({
+export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const session = await auth();
-
   return (
     <html lang="en">
       <head>
@@ -39,9 +35,7 @@ export default async function RootLayout({
       <body style={{ paddingTop: "env(safe-area-inset-top)", paddingBottom: "env(safe-area-inset-bottom)" }}>
         <SplashScreen />
         <PwaPrompt />
-        <SessionProvider session={session} basePath="/api/auth">
-          {children}
-        </SessionProvider>
+        {children}
         <Toaster
           position="bottom-right"
           toastOptions={{

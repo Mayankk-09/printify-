@@ -2,7 +2,6 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
 import toast from "react-hot-toast";
 import Link from "next/link";
 import { getEarliestPickupDate, getAvailableDates, formatDate, formatDateFull, getSlotLabel } from "@/lib/pickup";
@@ -30,7 +29,6 @@ export default function UploadPrintClient({
   initialPickupSettings: any;
 }) {
   const router = useRouter();
-  const { data: session } = useSession();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
   const [fileDetails, setFileDetails] = useState<any>(null);
@@ -107,7 +105,6 @@ export default function UploadPrintClient({
     try {
       const res = await fetch("/api/upload", {
         method: "POST",
-        headers: { Authorization: `Bearer ${session?.user?.id}` },
         body: fd,
       });
       const data = await res.json();

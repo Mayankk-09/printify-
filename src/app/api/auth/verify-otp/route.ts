@@ -1,72 +1,113 @@
 export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { cookies } from "next/headers";
 import { SignJWT } from "jose";
+import { prisma } from "@/lib/prisma";
+import nodemailer from "nodemailer";
+
+const globalOtpStore = new Map<string, { otp: string; expires: number }>();
+
+const transport = nodemailer.createTransport({
+  host: "smtp.gmail.com",
+  port: 465,
+  secure: true,
+  auth: {
+    user: process.env.GMAIL_USER,
+    pass: process.env.GMAIL_APP_PASSWORD,
+  },
+});
+
+function getSecret(): Uint8Array {
+  const key =
+    process.env.SESSION_SECRET ||
+    process.env.CLERK_SECRET_KEY ||
+    "printify-fallback-dev-secret-change-in-production";
+  return new TextEncoder().encode(key);
+}
 
 export async function POST(request: Request) {
   try {
-    const { phone, pin } = await request.json();
-
-    if (!phone || typeof phone !== "string" || !/^\d{10}$/.test(phone)) {
-      return NextResponse.json({ error: "Invalid phone number" }, { status: 400 });
-    }
-    if (!pin || typeof pin !== "string" || !/^\d{4,8}$/.test(pin)) {
-      return NextResponse.json({ error: "Invalid OTP code" }, { status: 400 });
+    const { email, name } = await request.json();
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return NextResponse.json({ error: "Invalid email address" }, { status: 400 });
     }
 
-    const authKey = process.env.MSG91_AUTH_KEY;
-    if (!authKey) {
-      return NextResponse.json({ error: "SMS service not configured" }, { status: 500 });
-    }
+    const sanitizedEmail = email.toLowerCase().trim();
+    const generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
 
-    const formattedPhone = `91${phone}`;
-    const verifyUrl = `https://control.msg91.com/api/v5/otp/verify?otp=${pin}&mobile=${formattedPhone}&authkey=${authKey}`;
+    globalOtpStore.set(sanitizedEmail, { otp: generatedOtp, expires: Date.now() + 5 * 60 * 1000 });
 
-    const verifyRes = await fetch(verifyUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
+    console.log(`>>> [DEV OTP DISPATCH LOG] CODE FOR ${sanitizedEmail} IS: ${generatedOtp}`);
+
+    await transport.sendMail({
+      from: `"Printify Gateway" <${process.env.GMAIL_USER}>`,
+      to: email,
+      subject: "[PRINTIFY] Your Access Security Pin",
+      html: `<div style="font-family: monospace; padding: 20px; background: #F9F9F6; border: 1px solid #000;"><h2 style="margin-top: 0;">PRINTIFY IDENTITY GATEWAY</h2><p>Your confidential 6-digit access security token is: <strong style="font-size: 20px; letter-spacing: 2px;">${generatedOtp}</strong></p><p style="color: #666666; font-size: 11px;">This verification key is strictly confidential and expires inside 5 minutes.</p></div>`,
     });
 
-    const verifyData = await verifyRes.json();
+    return NextResponse.json({ message: "Code dispatched cleanly" }, { status: 200 });
+  } catch (error: any) {
+    return NextResponse.json(
+      { error: error?.message || "Failed to send verification code" },
+      { status: 500 },
+    );
+  }
+}
 
-    if (!verifyRes.ok || verifyData.type !== "success") {
-      return NextResponse.json(
-        { error: verifyData.message || "Invalid or expired OTP" },
-        { status: 401 },
-      );
+export async function PUT(request: Request) {
+  try {
+    const { email, otp, name } = await request.json();
+
+    const sanitizedEmail = email ? email.toLowerCase().trim() : "";
+    const sanitizedOtp = otp ? otp.toString().replace(/\s/g, "").trim() : "";
+    const sanitizedName = name ? name.trim() : "";
+
+    console.log("[VERIFY-OTP:PUT] email:", JSON.stringify(sanitizedEmail));
+    console.log("[VERIFY-OTP:PUT] otp:", JSON.stringify(sanitizedOtp));
+
+    if (!sanitizedEmail || !sanitizedOtp) {
+      return NextResponse.json({ error: "Email and code are required" }, { status: 400 });
     }
 
-    let user = await prisma.user.findFirst({ where: { phone } });
+    const cachedData = globalOtpStore.get(sanitizedEmail);
+    let valid = false;
+    if (cachedData && Date.now() <= cachedData.expires && cachedData.otp === sanitizedOtp) {
+      valid = true;
+      globalOtpStore.delete(sanitizedEmail);
+    }
+
+    if (!valid) {
+      return NextResponse.json({ error: "Invalid or expired security code" }, { status: 401 });
+    }
+
+    let user = await prisma.user.findUnique({ where: { email: sanitizedEmail } });
 
     if (!user) {
       user = await prisma.user.create({
         data: {
-          name: `User-${phone.slice(-4)}`,
-          email: `mobile-${phone}@printify.app`,
-          phone,
-          passwordHash: "",
+          email: sanitizedEmail,
+          name: sanitizedName || "Campus Student",
           role: "student",
+          passwordHash: "otp-auth",
         },
       });
     }
 
-    const secret = new TextEncoder().encode(process.env.AUTH_SECRET);
-    if (!secret) {
-      return NextResponse.json({ error: "Auth secret not configured" }, { status: 500 });
-    }
-
-    const token = await new SignJWT({ userId: user.id, role: user.role })
+    const secret = getSecret();
+    const token = await new SignJWT({
+      userId: user.id,
+      email: user.email,
+      role: user.role,
+    })
       .setProtectedHeader({ alg: "HS256" })
       .setIssuedAt()
       .setExpirationTime("7d")
       .sign(secret);
 
-    const response = NextResponse.json({
-      user: { id: user.id, name: user.name, role: user.role },
-    });
-
-    response.cookies.set("session", token, {
+    const cookieStore = await cookies();
+    cookieStore.set("session", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
@@ -74,9 +115,11 @@ export async function POST(request: Request) {
       maxAge: 60 * 60 * 24 * 7,
     });
 
-    return response;
-  } catch (error) {
-    console.error("verify-otp error:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return NextResponse.json({ message: "Authenticated" }, { status: 200 });
+  } catch (error: any) {
+    return NextResponse.json(
+      { error: error?.message || "Verification failed" },
+      { status: 500 },
+    );
   }
 }

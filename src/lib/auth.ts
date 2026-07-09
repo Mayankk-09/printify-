@@ -1,65 +1,53 @@
-import NextAuth from "next-auth";
-import Credentials from "next-auth/providers/credentials";
-import { compare } from "bcryptjs";
+import { cookies } from "next/headers";
+import { jwtVerify } from "jose";
 import { prisma } from "./prisma";
 
-export const { handlers, signIn, signOut, auth } = NextAuth({
-  providers: [
-    Credentials({
-      name: "credentials",
-      credentials: {
-        email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" },
+type AuthResult = {
+  user: {
+    id: string;
+    name: string | null;
+    email: string;
+    role: string;
+  };
+} | null;
+
+function getSecret(): Uint8Array {
+  const key =
+    process.env.SESSION_SECRET ||
+    process.env.CLERK_SECRET_KEY ||
+    "printify-fallback-dev-secret-change-in-production";
+  return new TextEncoder().encode(key);
+}
+
+export async function auth(): Promise<AuthResult> {
+  try {
+    const cookieStore = await cookies();
+    const token = cookieStore.get("session")?.value;
+    if (!token) return null;
+
+    const { payload } = await jwtVerify(token, getSecret(), {
+      algorithms: ["HS256"],
+    });
+
+    const userId = payload.userId as string;
+    if (!userId) return null;
+
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) return null;
+
+    return {
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
       },
-      async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) return null;
+    };
+  } catch {
+    return null;
+  }
+}
 
-        const email = credentials.email as string;
-        const password = credentials.password as string;
-
-        const user = await prisma.user.findUnique({ where: { email } });
-        if (!user) return null;
-
-        const isValid = await compare(password, user.passwordHash);
-        if (!isValid) return null;
-
-        return {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          role: user.role,
-        };
-      },
-    }),
-  ],
-  callbacks: {
-    async jwt({ token, user }) {
-      if (user) {
-        token.id = user.id as string;
-        token.role = (user as any).role as string;
-      }
-      if (token.id) {
-        const dbUser = await prisma.user.findUnique({
-          where: { id: token.id as string },
-          select: { id: true, role: true },
-        });
-        if (!dbUser) return null;
-        token.role = dbUser.role;
-      }
-      return token;
-    },
-    async session({ session, token }) {
-      if (session.user && token.id) {
-        session.user.id = token.id as string;
-        session.user.role = token.role as string;
-      }
-      return session;
-    },
-  },
-  pages: {
-    signIn: "/login",
-  },
-  session: {
-    strategy: "jwt",
-  },
-});
+export function getSecretKey(): Uint8Array {
+  return getSecret();
+}

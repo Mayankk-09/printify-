@@ -8,7 +8,7 @@ function formatDate(d: Date | string): string {
 
 const remaining = (sub: any) => (sub?.pagesAllowed ?? 0) - (sub?.pagesUsed ?? 0);
 
-export default function ProfileClient({ user, subscription }: { user: { name: string; email: string; phone: string | null; createdAt: Date }; subscription: any }) {
+export default function ProfileClient({ user, subscription }: { user: { name: string | null; email: string; phone: string | null; createdAt: Date }; subscription: any }) {
   return (
     <div className="pf fade-in">
       <div className="pf-head">

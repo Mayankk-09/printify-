@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 
@@ -11,7 +10,6 @@ const PACK_TYPE_LABELS: Record<string, string> = {
 };
 
 export default function SubscribePage() {
-  const { data: session } = useSession();
   const router = useRouter();
   const [packs, setPacks] = useState<any[]>([]);
   const [balance, setBalance] = useState<any>(null);

@@ -1,6 +1,6 @@
 "use client";
 
-import { signOut, useSession } from "next-auth/react";
+import { useSession } from "@/lib/use-session";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
@@ -15,9 +15,8 @@ const navItems = [
 ];
 
 export default function Sidebar() {
-  const { data: session } = useSession();
+  const { isSignedIn, user, signOut } = useSession();
   const pathname = usePathname();
-  const user = session?.user;
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
 
@@ -46,7 +45,7 @@ export default function Sidebar() {
 
       <aside className={`sidebar ${open ? "sidebar-open" : ""}`}>
         <div className="sidebar-header">
-          <Link href={user ? "/dashboard" : "/login"} className="sidebar-brand">
+          <Link href={isSignedIn ? "/dashboard" : "/login"} className="sidebar-brand">
             <span className="brand-mark">P</span>
             <span className="brand-name">Printify</span>
           </Link>
@@ -69,18 +68,18 @@ export default function Sidebar() {
         </nav>
 
         <div className="sidebar-footer">
-          {user && (
+          {isSignedIn && user && (
             <div className="sidebar-user">
               <span className="avatar">{user.name?.charAt(0)?.toUpperCase() || "U"}</span>
               <div className="sidebar-user-info">
-                <strong>{user.name}</strong>
+                <strong>{user.name || "User"}</strong>
                 <small>Student</small>
               </div>
             </div>
           )}
           <button
             className="btn btn-secondary btn-sm w-100"
-            onClick={() => signOut({ callbackUrl: "/login" })}
+            onClick={() => signOut({ redirectUrl: "/" })}
             type="button"
           >
             Sign out

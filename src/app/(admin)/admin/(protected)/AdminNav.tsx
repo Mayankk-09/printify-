@@ -1,8 +1,8 @@
 "use client";
 
+import { useSession } from "@/lib/use-session";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { signOut } from "next-auth/react";
 import { useState } from "react";
 
 const adminLinks = [
@@ -17,6 +17,7 @@ const adminLinks = [
 ];
 
 export default function AdminNav({ user }: { user: any }) {
+  const { signOut } = useSession();
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
 
@@ -60,7 +61,7 @@ export default function AdminNav({ user }: { user: any }) {
               </div>
             )}
           </div>
-          <button className="btn btn-secondary btn-sm w-100" onClick={() => signOut({ callbackUrl: "/admin/login" })} type="button">
+          <button className="btn btn-secondary btn-sm w-100" onClick={() => signOut({ redirectUrl: "/" })} type="button">
             {collapsed ? "↩" : "Sign out"}
           </button>
         </div>

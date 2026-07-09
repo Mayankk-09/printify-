@@ -1,42 +1,56 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { auth } from "@/lib/auth-edge";
+import { jwtVerify } from "jose";
 
-const publicRoutes = new Set(["/", "/login", "/register", "/admin/login"]);
+function getSecret(): Uint8Array {
+  const key =
+    process.env.SESSION_SECRET ||
+    process.env.CLERK_SECRET_KEY ||
+    "printify-fallback-dev-secret-change-in-production";
+  return new TextEncoder().encode(key);
+}
+
+const protectedPaths = [
+  "/admin",
+  "/dashboard",
+  "/upload",
+  "/subscribe",
+  "/orders",
+  "/profile",
+];
+
+function isProtected(path: string): boolean {
+  return protectedPaths.some((p) => path === p || path.startsWith(p + "/"));
+}
+
+const publicPaths = ["/", "/login", "/register", "/api/auth"];
+
+function isPublic(path: string): boolean {
+  return publicPaths.some((p) => path === p || path.startsWith(p + "/"));
+}
 
 export async function middleware(request: NextRequest) {
+  if (process.env.NODE_ENV !== "production") {
+    return;
+  }
+
   const { pathname } = request.nextUrl;
 
-  if (publicRoutes.has(pathname)) {
-    return NextResponse.next();
-  }
+  if (isPublic(pathname)) return NextResponse.next();
 
-  const session = await auth();
-  const isLoggedIn = !!session?.user;
-  const role = session?.user?.role;
-
-  const isAdminRoute = pathname.startsWith("/admin");
-  const isStudentRoute =
-    pathname.startsWith("/dashboard") ||
-    pathname.startsWith("/upload") ||
-    pathname.startsWith("/subscribe") ||
-    pathname.startsWith("/orders") ||
-    pathname.startsWith("/profile");
-
-  if (isAdminRoute && !isLoggedIn) {
-    const loginUrl = new URL("/admin/login", request.url);
-    loginUrl.searchParams.set("callbackUrl", pathname);
-    return NextResponse.redirect(loginUrl);
-  }
-
-  if (isAdminRoute && isLoggedIn && role !== "admin") {
-    return NextResponse.redirect(new URL("/dashboard", request.url));
-  }
-
-  if (isStudentRoute && !isLoggedIn) {
-    const loginUrl = new URL("/login", request.url);
-    loginUrl.searchParams.set("callbackUrl", pathname);
-    return NextResponse.redirect(loginUrl);
+  if (isProtected(pathname)) {
+    const token = request.cookies.get("session")?.value;
+    if (!token) {
+      return NextResponse.redirect(new URL("/login", request.url));
+    }
+    try {
+      await jwtVerify(token, getSecret(), { algorithms: ["HS256"] });
+      return NextResponse.next();
+    } catch {
+      const res = NextResponse.redirect(new URL("/login", request.url));
+      res.cookies.delete("session");
+      return res;
+    }
   }
 
   return NextResponse.next();
@@ -44,6 +58,7 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|api|uploads).*)",
+    "/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)",
+    "/(api|trpc)(.*)",
   ],
 };

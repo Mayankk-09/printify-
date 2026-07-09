@@ -1,16 +1,15 @@
 "use client";
 
-import { signOut, useSession } from "next-auth/react";
+import { useSession } from "@/lib/use-session";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
 
 export default function Navbar() {
-  const { data: session } = useSession();
+  const { isSignedIn, user, signOut } = useSession();
   const pathname = usePathname();
-  const user = session?.user;
-  const isStudent = user?.role === "student";
-  const isStaff = user?.role === "admin";
+  const isStudent = true;
+  const isStaff = false;
 
   const [remainingPages, setRemainingPages] = useState<number | null>(null);
 
@@ -55,7 +54,7 @@ export default function Navbar() {
           </div>
 
           <div className="nav-actions">
-            {user ? (
+            {isSignedIn ? (
               <>
                 {isStudent && remainingPages !== null && (
                   <div className="pages-pill">
@@ -64,13 +63,13 @@ export default function Navbar() {
                   </div>
                 )}
                 <div className="user-chip">
-                  <span className="avatar">{user.name?.charAt(0)?.toUpperCase() || "U"}</span>
+                  <span className="avatar">{user?.name?.charAt(0)?.toUpperCase() || "U"}</span>
                   <div className="user-info">
-                    <strong>{user.name}</strong>
-                    <small>{isStudent ? "Student" : user.role}</small>
+                    <strong>{user?.name || "User"}</strong>
+                    <small>{isStudent ? "Student" : "Staff"}</small>
                   </div>
                 </div>
-                <button className="btn btn-secondary btn-sm" onClick={() => signOut({ callbackUrl: "/login" })} type="button">
+                <button className="btn btn-secondary btn-sm" onClick={() => signOut({ redirectUrl: "/" })} type="button">
                   Sign out
                 </button>
               </>

@@ -1,71 +1,95 @@
 export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
+import nodemailer from "nodemailer";
+import { prisma } from "@/lib/prisma";
+
+const otpCache = new Map<string, { otp: string; name: string; expires: number }>();
+
+const transport = nodemailer.createTransport({
+  host: "smtp.gmail.com",
+  port: 465,
+  secure: true,
+  auth: {
+    user: process.env.GMAIL_USER,
+    pass: process.env.GMAIL_APP_PASSWORD,
+  },
+});
 
 export async function POST(request: Request) {
   try {
-    let { phone } = await request.json();
-    console.log(">>> [SendOTP] Incoming phone payload from client:", phone);
-
-    phone = (phone ?? "").replace(/^(\+|91)/, "");
-
-    if (!phone || typeof phone !== "string" || !/^\d{10}$/.test(phone)) {
-      console.log(">>> [SendOTP] Invalid phone number after sanitize:", phone);
-      return NextResponse.json({ error: "Invalid phone number" }, { status: 400 });
+    const { email, name } = await request.json();
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return NextResponse.json({ error: "Invalid email address" }, { status: 400 });
     }
 
-    console.log(">>> [SendOTP] Check env tokens - AuthKey:", !!process.env.MSG91_AUTH_KEY, " | TemplateID:", !!process.env.MSG91_TEMPLATE_ID);
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const cacheKey = email.toLowerCase().trim();
+    otpCache.set(cacheKey, { otp, name: name || "", expires: Date.now() + 5 * 60 * 1000 });
 
-    const authKey = process.env.MSG91_AUTH_KEY;
-    const templateId = process.env.MSG91_TEMPLATE_ID;
-
-    if (!authKey || !templateId) {
-      console.log(">>> [SendOTP] Missing env configuration - AuthKey found:", !!authKey, " | TemplateID found:", !!templateId);
-      return NextResponse.json({ error: "SMS service not configured" }, { status: 500 });
-    }
-
-    const formattedPhone = `91${phone}`;
-    const bodyPayload = JSON.stringify({
-      template_id: templateId,
-      mobile: formattedPhone,
-      otp_length: 6,
+    await transport.sendMail({
+      from: `"Printify Gateway" <${process.env.GMAIL_USER}>`,
+      to: email,
+      subject: "[PRINTIFY] Your Access Security Pin",
+      html: `<div style="font-family: monospace; padding: 20px; background: #F9F9F6; border: 1px solid #000;"><h2 style="margin-top: 0;">PRINTIFY IDENTITY GATEWAY</h2><p>Your confidential 6-digit access security token is: <strong style="font-size: 20px; letter-spacing: 2px;">${otp}</strong></p><p style="color: #666666; font-size: 11px;">This verification key is strictly confidential and expires inside 5 minutes.</p></div>`,
     });
 
-    console.log(">>> [SendOTP] Firing fetch request to MSG91 endpoint...");
-    console.log(">>> [SendOTP] Request body:", bodyPayload);
+    return NextResponse.json({ message: "Code sent" }, { status: 200 });
+  } catch (error: any) {
+    return NextResponse.json(
+      { error: error?.message || "Failed to send verification code" },
+      { status: 500 },
+    );
+  }
+}
 
-    let msg91Res: Response;
+export async function PUT(request: Request) {
+  try {
+    const { email, otp, name } = await request.json();
 
-    try {
-      msg91Res = await fetch("https://control.msg91.com/api/v5/otp", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          authkey: authKey,
+    const sanitizedEmail = email ? email.toLowerCase().trim() : "";
+    const sanitizedOtp = otp ? otp.toString().replace(/\s/g, "").trim() : "";
+    const sanitizedName = name ? name.trim() : "";
+
+    console.log("[SEND-OTP:PUT] email:", JSON.stringify(sanitizedEmail));
+    console.log("[SEND-OTP:PUT] otp:", JSON.stringify(sanitizedOtp));
+
+    if (!sanitizedEmail || !sanitizedOtp) {
+      return NextResponse.json({ success: false, error: "Email and code are required" }, { status: 400 });
+    }
+
+    const cachedData = otpCache.get(sanitizedEmail);
+
+    if (!cachedData || Date.now() > cachedData.expires) {
+      if (cachedData) otpCache.delete(sanitizedEmail);
+      return NextResponse.json({ success: false, error: "Invalid or expired key." }, { status: 401 });
+    }
+
+    if (cachedData.otp !== sanitizedOtp) {
+      return NextResponse.json({ success: false, error: "Invalid or expired key." }, { status: 401 });
+    }
+
+    let user = await prisma.user.findUnique({ where: { email: sanitizedEmail } });
+
+    if (!user) {
+      const userName = sanitizedName || cachedData.name || "Campus Student";
+      user = await prisma.user.create({
+        data: {
+          email: sanitizedEmail,
+          name: userName,
+          role: "student",
+          passwordHash: "otp-auth",
         },
-        body: bodyPayload,
       });
-    } catch (fetchError) {
-      console.error(">>> [SendOTP] Network error while reaching MSG91:", fetchError);
-      return NextResponse.json({ error: "Failed to reach SMS gateway" }, { status: 502 });
     }
 
-    console.log(">>> [SendOTP] Raw MSG91 HTTP status:", msg91Res.status);
+    otpCache.delete(sanitizedEmail);
 
-    const responseText = await msg91Res.text();
-    console.log(">>> [SendOTP] Gateway Server Tracking Log:", responseText);
-
-    if (!msg91Res.ok) {
-      return NextResponse.json(
-        { error: "Failed to send OTP" },
-        { status: msg91Res.status },
-      );
-    }
-
-    console.log(">>> [SendOTP] MSG91 accepted and dispatched OTP successfully");
-    return NextResponse.json({ success: true });
-  } catch (error) {
-    console.error(">>> [SendOTP] Unexpected error in POST handler:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return NextResponse.json({ success: true, message: "Authorized" }, { status: 200 });
+  } catch (error: any) {
+    return NextResponse.json(
+      { success: false, error: error?.message || "Verification failed" },
+      { status: 500 },
+    );
   }
 }
