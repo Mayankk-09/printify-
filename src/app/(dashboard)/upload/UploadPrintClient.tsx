@@ -71,6 +71,14 @@ export default function UploadPrintClient({
     if (initialPickupSettings.slots.length > 0) {
       setSelectedSlot(initialPickupSettings.slots[0].value);
     }
+
+    if (!document.getElementById("razorpay-checkout-script")) {
+      const script = document.createElement("script");
+      script.id = "razorpay-checkout-script";
+      script.src = "https://checkout.razorpay.com/v1/checkout.js";
+      script.async = true;
+      document.body.appendChild(script);
+    }
   }, [initialAddons, initialPacks, initialPickupSettings]);
 
   const remainingPages = Math.max(0, totalAllowed - totalUsed);
@@ -223,34 +231,96 @@ const isTrialEligible = trialActive && color === "bw" && printablePages <= trial
   const handlePayNow = async () => {
     if (!fileDetails || !paymentModal) return;
     setSubmitting(true);
+
     try {
-      const res = await fetch("/api/orders", {
+      const orderRes = await fetch("/api/create-order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          fileName: fileDetails.fileName,
-          filePath: fileDetails.filePath,
-          fileSize: fileDetails.fileSize,
-          pages: pagesPerDoc,
-          copies: numCopies,
-          printablePages,
-          printMode: color === "color" ? "COLOR" : "BW",
-          printSide: side === "double" ? "DOUBLE" : "SINGLE",
-          pickupDate: selectedDate,
-          pickupSlot: selectedSlot,
-          addonIds: selectedAddonIds,
-          paymentConfirmed: true,
-        }),
+        body: JSON.stringify({ amount: paymentModal.amount }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Order creation failed");
-      setPaymentModal(null);
-      setSuccess(true);
-      toast.success("Payment successful! Order submitted.");
-      window.setTimeout(() => router.push("/dashboard"), 1200);
+      const orderData = await orderRes.json();
+      if (!orderRes.ok) throw new Error(orderData.error || "Failed to create order");
+
+      const options = {
+        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+        amount: orderData.amount,
+        currency: orderData.currency,
+        name: "PRINTIFY",
+        description: "Print Order Payment",
+        order_id: orderData.orderId,
+        handler: async (response: any) => {
+          try {
+            const verifyRes = await fetch("/api/verify-payment", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                razorpayOrderId: response.razorpay_order_id,
+                razorpayPaymentId: response.razorpay_payment_id,
+                razorpaySignature: response.razorpay_signature,
+              }),
+            });
+            const verifyData = await verifyRes.json();
+            if (!verifyRes.ok) throw new Error(verifyData.error || "Payment verification failed");
+
+            const orderCreateRes = await fetch("/api/orders", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                fileName: fileDetails.fileName,
+                filePath: fileDetails.filePath,
+                fileSize: fileDetails.fileSize,
+                pages: pagesPerDoc,
+                copies: numCopies,
+                printablePages,
+                printMode: color === "color" ? "COLOR" : "BW",
+                printSide: side === "double" ? "DOUBLE" : "SINGLE",
+                pickupDate: selectedDate,
+                pickupSlot: selectedSlot,
+                addonIds: selectedAddonIds,
+                paymentConfirmed: true,
+                razorpayPaymentId: response.razorpay_payment_id,
+                razorpayOrderId: response.razorpay_order_id,
+                razorpaySignature: response.razorpay_signature,
+              }),
+            });
+            const orderCreateData = await orderCreateRes.json();
+            if (!orderCreateRes.ok) throw new Error(orderCreateData.error || "Order creation failed");
+
+            setPaymentModal(null);
+            setSuccess(true);
+            toast.success("Payment successful! Order submitted.");
+            window.setTimeout(() => router.push("/dashboard"), 1200);
+          } catch (err: any) {
+            toast.error(err.message || "Payment verification failed");
+          } finally {
+            setSubmitting(false);
+          }
+        },
+        prefill: {
+          email: userData?.email || "",
+          contact: userData?.phone || "",
+        },
+        theme: {
+          color: "#000000",
+        },
+        modal: {
+          ondismiss: () => {
+            setSubmitting(false);
+            toast.error("Payment cancelled");
+          },
+        },
+      };
+
+      const rzp = new (window as any).Razorpay(options);
+      rzp.on("payment.failed", (response: any) => {
+        toast.error(response.error?.description || "Payment failed");
+        setSubmitting(false);
+      });
+      rzp.open();
     } catch (err: any) {
       toast.error(err.message || "Payment failed");
-    } finally { setSubmitting(false); }
+      setSubmitting(false);
+    }
   };
 
   const bestPackUpsell = packs.length > 0 ? packs.reduce((best, p) =>
