@@ -470,7 +470,7 @@ const isTrialEligible = trialActive && color === "bw" && printablePages <= trial
             <button
               className="btn btn-primary w-100 mt-3"
               type="button"
-              disabled={!fileDetails || submitting || colorBlocked || !selectedSlot}
+              disabled={!fileDetails || submitting || !selectedSlot}
               onClick={handleSubmit}
             >
               {submitting ? (
@@ -478,11 +478,11 @@ const isTrialEligible = trialActive && color === "bw" && printablePages <= trial
               ) : !fileDetails ? (
                 "Upload a document"
               ) : trialUsed ? (
-                "Submit (Free Trial)"
+                "PLACE ORDER via PAGE CREDITS"
               ) : breakdown.grandTotal > 0 ? (
-                `Pay ${formatPrice(breakdown.grandTotal)}`
+                `PROCEED TO PAY ${formatPrice(breakdown.grandTotal)} // SECURE via RAZORPAY`
               ) : (
-                "Submit Order"
+                "PLACE ORDER via PAGE CREDITS"
               )}
             </button>
 

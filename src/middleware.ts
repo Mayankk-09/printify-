@@ -9,6 +9,10 @@ function getSecret(): Uint8Array {
   return new TextEncoder().encode(process.env.SESSION_SECRET);
 }
 
+function isAdminPath(path: string): boolean {
+  return path === "/admin" || path.startsWith("/admin/");
+}
+
 const protectedPaths = [
   "/admin",
   "/dashboard",
@@ -39,7 +43,12 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(new URL("/login", request.url));
     }
     try {
-      await jwtVerify(token, getSecret(), { algorithms: ["HS256"] });
+      const { payload } = await jwtVerify(token, getSecret(), { algorithms: ["HS256"] });
+
+      if (isAdminPath(pathname) && payload.role !== "admin") {
+        return NextResponse.redirect(new URL("/dashboard", request.url));
+      }
+
       return NextResponse.next();
     } catch {
       const res = NextResponse.redirect(new URL("/login", request.url));
