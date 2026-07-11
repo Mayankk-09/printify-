@@ -1,13 +1,11 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useState, useRef, useCallback } from "react";
 import StableInput from "@/components/StableInput";
 
 type AuthStep = "email" | "otp";
 
 export default function SignInPage() {
-  const router = useRouter();
   const [step, setStep] = useState<AuthStep>("email");
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
@@ -73,7 +71,9 @@ export default function SignInPage() {
     }
   };
 
-  const handleVerify = useCallback(async () => {
+  const handleVerify = useCallback(async (e?: React.MouseEvent | React.FormEvent) => {
+    console.log(">>> [VERIFY] Submission triggered. Compiling OTP digits array:", pin);
+    if (e && typeof e.preventDefault === "function") e.preventDefault();
     const code = pin.join("").trim();
     if (code.length !== 6) {
       setError("Enter all 6 digits");
@@ -87,17 +87,22 @@ export default function SignInPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, otp: code, name: name.trim() }),
       });
-      if (res.ok) {
-        router.push("/dashboard");
+      console.log(">>> [VERIFY] Network response status code received:", res.status);
+      console.log(">>> [VERIFY] Network response ok state:", res.ok);
+      if (res.status === 200 || res.ok) {
+        console.log(">>> [VERIFY] Success detected. Attempting hard window redirection to /dashboard...");
+        window.location.href = "/dashboard";
+        return;
       } else {
         setError("Invalid security pin code.");
       }
-    } catch {
-      setError("Network error. Please try again.");
+    } catch (err) {
+      console.error(">>> [VERIFY CRITICAL ERROR TRACE]:", err);
+      setError(err instanceof Error ? err.message : "Invisible runtime interception triggered.");
     } finally {
       setLoading(false);
     }
-  }, [pin, email, name, router]);
+  }, [pin, email, name]);
 
   const handleBack = () => {
     setAnimating(true);

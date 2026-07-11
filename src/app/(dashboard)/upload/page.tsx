@@ -6,6 +6,7 @@ import { getPickupSettings } from "@/lib/pickup";
 
 export default async function UploadPage() {
   const session = await auth();
+
   if (!session?.user) redirect("/login");
   if (session.user.role !== "student") redirect("/admin/dashboard");
 

@@ -1,10 +1,17 @@
 export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
+import { SignJWT } from "jose";
 import nodemailer from "nodemailer";
 import { prisma } from "@/lib/prisma";
 
 const otpCache = new Map<string, { otp: string; name: string; expires: number }>();
+
+function getSecret(): Uint8Array {
+  const key = process.env.SESSION_SECRET || "printify-fallback-dev-secret-change-in-production";
+  return new TextEncoder().encode(key);
+}
 
 const transport = nodemailer.createTransport({
   host: "smtp.gmail.com",
@@ -85,7 +92,25 @@ export async function PUT(request: Request) {
 
     otpCache.delete(sanitizedEmail);
 
-    return NextResponse.json({ success: true, message: "Authorized" }, { status: 200 });
+    const token = await new SignJWT({
+      userId: user.id,
+      email: user.email,
+      role: user.role,
+    })
+      .setProtectedHeader({ alg: "HS256" })
+      .setIssuedAt()
+      .setExpirationTime("7d")
+      .sign(getSecret());
+
+    const response = NextResponse.json({ success: true, message: "Authorized" }, { status: 200 });
+    response.cookies.set("session", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+      maxAge: 60 * 60 * 24 * 7,
+    });
+    return response;
   } catch (error: any) {
     return NextResponse.json(
       { success: false, error: error?.message || "Verification failed" },

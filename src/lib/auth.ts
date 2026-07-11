@@ -12,10 +12,7 @@ type AuthResult = {
 } | null;
 
 function getSecret(): Uint8Array {
-  const key =
-    process.env.SESSION_SECRET ||
-    process.env.CLERK_SECRET_KEY ||
-    "printify-fallback-dev-secret-change-in-production";
+  const key = process.env.SESSION_SECRET || "printify-fallback-dev-secret-change-in-production";
   return new TextEncoder().encode(key);
 }
 

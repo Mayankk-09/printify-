@@ -3,10 +3,7 @@ import type { NextRequest } from "next/server";
 import { jwtVerify } from "jose";
 
 function getSecret(): Uint8Array {
-  const key =
-    process.env.SESSION_SECRET ||
-    process.env.CLERK_SECRET_KEY ||
-    "printify-fallback-dev-secret-change-in-production";
+  const key = process.env.SESSION_SECRET || "printify-fallback-dev-secret-change-in-production";
   return new TextEncoder().encode(key);
 }
 
@@ -30,10 +27,6 @@ function isPublic(path: string): boolean {
 }
 
 export async function middleware(request: NextRequest) {
-  if (process.env.NODE_ENV !== "production") {
-    return;
-  }
-
   const { pathname } = request.nextUrl;
 
   if (isPublic(pathname)) return NextResponse.next();
