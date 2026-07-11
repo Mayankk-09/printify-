@@ -53,8 +53,13 @@ model User {
   role            UserRole       @default(student)
   image           String?
   emailVerified   DateTime?
+  pickupId        String?        @unique
+  otpCode         String?
+  otpExpires      DateTime?
+  otpName         String?
   hasUsedTrial    Boolean        @default(false)
   hasClaimedTrial Boolean        @default(false)
+  hasOrderedBefore Boolean       @default(false)
   claimedTrialAt  DateTime?
   trialOrderId    String?
   trialUsedAt     DateTime?
@@ -64,6 +69,7 @@ model User {
   subscriptions   Subscription[]
   orders          Order[]
   payments        Payment[]
+  usedCoupons     UserCoupon[]
 }
 
 model Pack {
@@ -244,4 +250,27 @@ model SystemSetting {
   type      String   @default("string")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model Coupon {
+  id          String       @id @default(uuid())
+  code        String       @unique
+  type        String
+  value       Float
+  isActive    Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+
+  userCoupons UserCoupon[]
+}
+
+model UserCoupon {
+  id        String   @id @default(uuid())
+  userId    String
+  couponId  String
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  coupon    Coupon   @relation(fields: [couponId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, couponId])
 }

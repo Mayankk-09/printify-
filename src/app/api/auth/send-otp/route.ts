@@ -1,16 +1,15 @@
 export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
 import { SignJWT } from "jose";
 import nodemailer from "nodemailer";
 import { prisma } from "@/lib/prisma";
 
-const otpCache = new Map<string, { otp: string; name: string; expires: number }>();
-
 function getSecret(): Uint8Array {
-  const key = process.env.SESSION_SECRET || "printify-fallback-dev-secret-change-in-production";
-  return new TextEncoder().encode(key);
+  if (!process.env.SESSION_SECRET) {
+    throw new Error("SECURITY BLOCK: SESSION_SECRET environment variable is missing!");
+  }
+  return new TextEncoder().encode(process.env.SESSION_SECRET);
 }
 
 const transport = nodemailer.createTransport({
@@ -30,9 +29,30 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Invalid email address" }, { status: 400 });
     }
 
+    const sanitizedEmail = email.toLowerCase().trim();
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    const cacheKey = email.toLowerCase().trim();
-    otpCache.set(cacheKey, { otp, name: name || "", expires: Date.now() + 5 * 60 * 1000 });
+    const otpExpires = new Date(Date.now() + 5 * 60 * 1000);
+
+    const existingUser = await prisma.user.findUnique({ where: { email: sanitizedEmail } });
+
+    if (existingUser) {
+      await prisma.user.update({
+        where: { email: sanitizedEmail },
+        data: { otpCode: otp, otpExpires, otpName: null },
+      });
+    } else {
+      await prisma.user.create({
+        data: {
+          email: sanitizedEmail,
+          name: name?.trim() || "Campus Student",
+          role: "student",
+          passwordHash: "otp-auth",
+          otpCode: otp,
+          otpExpires,
+          otpName: name?.trim() || null,
+        },
+      });
+    }
 
     await transport.sendMail({
       from: `"Printify Gateway" <${process.env.GMAIL_USER}>`,
@@ -58,39 +78,47 @@ export async function PUT(request: Request) {
     const sanitizedOtp = otp ? otp.toString().replace(/\s/g, "").trim() : "";
     const sanitizedName = name ? name.trim() : "";
 
-    console.log("[SEND-OTP:PUT] email:", JSON.stringify(sanitizedEmail));
-    console.log("[SEND-OTP:PUT] otp:", JSON.stringify(sanitizedOtp));
-
     if (!sanitizedEmail || !sanitizedOtp) {
       return NextResponse.json({ success: false, error: "Email and code are required" }, { status: 400 });
-    }
-
-    const cachedData = otpCache.get(sanitizedEmail);
-
-    if (!cachedData || Date.now() > cachedData.expires) {
-      if (cachedData) otpCache.delete(sanitizedEmail);
-      return NextResponse.json({ success: false, error: "Invalid or expired key." }, { status: 401 });
-    }
-
-    if (cachedData.otp !== sanitizedOtp) {
-      return NextResponse.json({ success: false, error: "Invalid or expired key." }, { status: 401 });
     }
 
     let user = await prisma.user.findUnique({ where: { email: sanitizedEmail } });
 
     if (!user) {
-      const userName = sanitizedName || cachedData.name || "Campus Student";
+      const userName = sanitizedName || "Campus Student";
+      const randomPickupId = Math.floor(100000 + Math.random() * 900000).toString();
+
       user = await prisma.user.create({
         data: {
           email: sanitizedEmail,
           name: userName,
           role: "student",
           passwordHash: "otp-auth",
+          pickupId: randomPickupId,
         },
       });
-    }
+    } else {
+      if (!user.otpCode || !user.otpExpires) {
+        return NextResponse.json({ success: false, error: "Invalid or expired key." }, { status: 401 });
+      }
 
-    otpCache.delete(sanitizedEmail);
+      if (Date.now() > user.otpExpires.getTime()) {
+        await prisma.user.update({
+          where: { email: sanitizedEmail },
+          data: { otpCode: null, otpExpires: null, otpName: null },
+        });
+        return NextResponse.json({ success: false, error: "Invalid or expired key." }, { status: 401 });
+      }
+
+      if (user.otpCode !== sanitizedOtp) {
+        return NextResponse.json({ success: false, error: "Invalid or expired key." }, { status: 401 });
+      }
+
+      await prisma.user.update({
+        where: { email: sanitizedEmail },
+        data: { otpCode: null, otpExpires: null, otpName: null },
+      });
+    }
 
     const token = await new SignJWT({
       userId: user.id,

@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 
 const PACK_TYPE_LABELS: Record<string, string> = {
@@ -10,14 +9,15 @@ const PACK_TYPE_LABELS: Record<string, string> = {
 };
 
 export default function SubscribePage() {
-  const router = useRouter();
   const [packs, setPacks] = useState<any[]>([]);
   const [balance, setBalance] = useState<any>(null);
-  const [userData, setUserData] = useState<any>(null);
   const [selectedPack, setSelectedPack] = useState<any>(null);
-  const [claimingTrial, setClaimingTrial] = useState(false);
-  const [trialConfirm, setTrialConfirm] = useState(false);
   const [processing, setProcessing] = useState(false);
+
+  const [couponCode, setCouponCode] = useState("");
+  const [couponLoading, setCouponLoading] = useState(false);
+  const [couponResult, setCouponResult] = useState<any>(null);
+  const [discountedTotal, setDiscountedTotal] = useState<number | null>(null);
 
   useEffect(() => {
     fetch("/api/plans")
@@ -26,10 +26,6 @@ export default function SubscribePage() {
     fetch("/api/subscriptions/mine")
       .then((r) => r.json())
       .then(setBalance)
-      .catch(() => {});
-    fetch("/api/users/me")
-      .then((r) => r.json())
-      .then((d) => setUserData(d))
       .catch(() => {});
   }, []);
 
@@ -46,6 +42,9 @@ export default function SubscribePage() {
       if (!res.ok) throw new Error(data.error || "Purchase failed");
       toast.success(`${selectedPack.name} purchased!`);
       setSelectedPack(null);
+      setCouponCode("");
+      setCouponResult(null);
+      setDiscountedTotal(null);
       const updated = await fetch("/api/subscriptions/mine").then((r) => r.json());
       setBalance(updated);
     } catch (err: any) {
@@ -55,25 +54,32 @@ export default function SubscribePage() {
     }
   };
 
-  const handleClaimTrial = async () => {
-    setClaimingTrial(true);
+  const handleApplyCoupon = async () => {
+    if (!selectedPack || !couponCode.trim()) return;
+    setCouponLoading(true);
+    setCouponResult(null);
+    setDiscountedTotal(null);
     try {
-      const res = await fetch("/api/trials/claim", { method: "POST" });
+      const res = await fetch("/api/payments/validate-coupon", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ couponCode: couponCode.trim(), baseAmount: selectedPack.price / 100 }),
+      });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to claim trial");
-      setUserData((prev: any) => ({ ...prev, hasClaimedTrial: true, claimedTrialAt: new Date() }));
-      setTrialConfirm(true);
+      if (!res.ok) throw new Error(data.error || "Coupon failed");
+      setCouponResult(data);
+      setDiscountedTotal(data.finalAmount);
+      toast.success("PROMO APPLIED SUCCESS // ORDER RECALCULATED");
     } catch (err: any) {
-      toast.error(err.message || "Unable to claim trial");
+      setCouponResult(null);
+      setDiscountedTotal(null);
+      toast.error(err.message || "Coupon validation failed");
     } finally {
-      setClaimingTrial(false);
+      setCouponLoading(false);
     }
   };
 
   const remaining = balance?.remainingPages ?? 0;
-  const hasClaimedTrial = userData?.hasClaimedTrial ?? false;
-  const hasUsedTrial = userData?.hasUsedTrial ?? false;
-  const canClaimTrial = !hasClaimedTrial && !hasUsedTrial;
 
   return (
     <div className="pp fade-in">
@@ -89,57 +95,6 @@ export default function SubscribePage() {
           <span className="text-muted text-sm">pages remaining</span>
         </div>
       </header>
-
-      {canClaimTrial && (
-        <section className="pp-trial">
-          <div className="glass-card pp-trial-card">
-            <div className="pp-trial-icon">🎉</div>
-            <div className="pp-trial-info">
-              <h2>Free Trial</h2>
-              <p className="text-secondary text-sm">
-                One free black-and-white print order of up to 5 pages. No payment needed.
-              </p>
-              <ul className="pp-trial-rules">
-                <li>Up to 5 pages</li>
-                <li>Black & white only</li>
-                <li>Single copy</li>
-                <li>One per lifetime</li>
-              </ul>
-            </div>
-            <button
-              className="btn btn-primary"
-              type="button"
-              onClick={handleClaimTrial}
-              disabled={claimingTrial}
-            >
-              {claimingTrial ? <div className="spinner" /> : "Claim Free Trial — ₹0"}
-            </button>
-          </div>
-        </section>
-      )}
-
-      {trialConfirm && (
-        <div className="modal-backdrop">
-          <div className="glass-card modal-card" style={{ maxWidth: 480, textAlign: "center" }}>
-            <div className="trial-confetti">🎉</div>
-            <h2 className="font-black" style={{ fontSize: "1.4rem", marginBottom: 12 }}>
-              Congratulations!
-            </h2>
-            <p className="text-secondary" style={{ lineHeight: 1.7, marginBottom: 20 }}>
-              You have successfully claimed your Free Trial.
-              <br /><br />
-              Your first Black &amp; White print order of up to 5 printable pages is completely free.
-            </p>
-            <button
-              className="btn btn-primary"
-              type="button"
-              onClick={() => { setTrialConfirm(false); router.push("/upload"); }}
-            >
-              Upload Document
-            </button>
-          </div>
-        </div>
-      )}
 
       <section className="pp-grid">
         {packs.map((pack) => {
@@ -174,7 +129,7 @@ export default function SubscribePage() {
               <button
                 className="btn btn-primary w-100"
                 type="button"
-                onClick={() => setSelectedPack(pack)}
+                onClick={() => { setSelectedPack(pack); setCouponCode(""); setCouponResult(null); setDiscountedTotal(null); }}
               >
                 Buy Now
               </button>
@@ -218,6 +173,38 @@ export default function SubscribePage() {
               </div>
             </div>
 
+            <div className="pp-coupon-bar">
+              <input
+                className="pp-coupon-input"
+                type="text"
+                placeholder="ENTER PROMO CODE"
+                value={couponCode}
+                onChange={(e) => { setCouponCode(e.target.value); setCouponResult(null); setDiscountedTotal(null); }}
+                maxLength={20}
+              />
+              <button
+                className="pp-coupon-btn"
+                type="button"
+                onClick={handleApplyCoupon}
+                disabled={couponLoading || !couponCode.trim()}
+              >
+                {couponLoading ? <div className="spinner" /> : "APPLY CODE // SECURE"}
+              </button>
+            </div>
+
+            {couponResult && (
+              <div className="pp-coupon-status">
+                PROMO APPLIED SUCCESS // ORDER RECALCULATED
+              </div>
+            )}
+
+            {discountedTotal !== null && (
+              <div className="pp-discounted-row">
+                <span>Discounted total</span>
+                <strong>₹{discountedTotal.toFixed(2)}</strong>
+              </div>
+            )}
+
             <p className="text-secondary text-sm" style={{ lineHeight: 1.5 }}>
               Pages never expire. Use them anytime for any print job.
               {remaining > 0 && ` You already have ${remaining} pages remaining — this will be added on top.`}
@@ -237,7 +224,7 @@ export default function SubscribePage() {
                 onClick={handlePurchase}
                 disabled={processing}
               >
-                {processing ? <div className="spinner" /> : `Pay ₹${(selectedPack.price / 100).toFixed(2)}`}
+                {processing ? <div className="spinner" /> : `Pay ₹${discountedTotal !== null ? discountedTotal.toFixed(2) : (selectedPack.price / 100).toFixed(2)}`}
               </button>
             </div>
           </div>
@@ -250,12 +237,6 @@ export default function SubscribePage() {
         .pp-header p { margin-top: 4px; }
         .pp-balance { min-width: 200px; display: flex; flex-direction: column; gap: 4px; justify-content: center; align-items: center; border: 1px solid var(--border-primary); background: var(--bg-card); padding: 20px; }
         .pp-balance-num { font-size: 2.2rem; line-height: 1; font-weight: 800; font-family: var(--font-serif-alt); letter-spacing: -0.03em; }
-        .pp-trial-card { display: flex; align-items: center; gap: 16px; border: 2px dashed var(--border-primary); background: var(--bg-card); padding: 20px; }
-        .pp-trial-info { flex: 1; }
-        .pp-trial-info h2 { font-size: 1rem; font-weight: 800; font-family: var(--font-serif); }
-        .pp-trial-icon { font-size: 2rem; flex-shrink: 0; }
-        .pp-trial-rules { list-style: none; padding: 0; margin: 8px 0 0; display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 0.78rem; color: var(--text-secondary); font-family: var(--font-mono); }
-        .pp-trial-rules li::before { content: "•"; margin-right: 4px; }
         .pp-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
         .pp-card { position: relative; display: flex; flex-direction: column; gap: 10px; overflow: hidden; padding: 20px; border: 1px solid var(--border-primary); background: var(--bg-card); }
         .pp-card:active { transform: scale(0.99); }
@@ -271,13 +252,19 @@ export default function SubscribePage() {
         .pp-pages span { font-size: 0.8rem; font-weight: 600; }
         .pp-per-page { font-size: 0.78rem; color: var(--text-muted); font-weight: 600; text-align: center; font-family: var(--font-mono); }
         .pp-print-mode { font-size: 0.75rem; color: var(--text-muted); font-weight: 600; text-align: center; border-top: 1px solid var(--border-light); padding-top: 6px; font-family: var(--font-mono); }
+        .pp-coupon-bar { display: flex; gap: 0; border: 1px solid #000; background: #F9F9F6; margin-top: 12px; }
+        .pp-coupon-input { flex: 1; padding: 12px 14px; border: none; border-right: 1px solid #000; background: transparent; font-family: var(--font-mono); font-size: 0.82rem; font-weight: 600; letter-spacing: 0.04em; outline: none; text-transform: uppercase; }
+        .pp-coupon-input::placeholder { color: var(--text-muted); }
+        .pp-coupon-btn { padding: 12px 20px; border: none; background: var(--bg-black); color: #fff; font-family: var(--font-mono); font-size: 0.72rem; font-weight: 800; letter-spacing: 0.06em; cursor: pointer; text-transform: uppercase; white-space: nowrap; }
+        .pp-coupon-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .pp-coupon-status { padding: 10px 14px; border: 1px solid #000; background: #F9F9F6; font-family: var(--font-mono); font-size: 0.72rem; font-weight: 700; letter-spacing: 0.04em; margin-top: 8px; }
+        .pp-discounted-row { display: flex; justify-content: space-between; padding: 8px 0; border-top: 2px solid var(--border-primary); margin-top: 8px; font-weight: 800; font-size: 0.95rem; }
+        .pp-discounted-row strong { color: var(--text-primary); }
         .pp-modal-preview { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px; }
         .pp-modal-preview div { border: 1px solid var(--border-light); padding: 12px; display: flex; flex-direction: column; gap: 4px; }
         .pp-modal-preview strong { font-size: 1.2rem; font-family: var(--font-serif-alt); }
-        .trial-confetti { font-size: 4rem; margin-bottom: 12px; animation: bounce 0.5s ease; }
-        @keyframes bounce { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.2); } }
-        @media (max-width: 900px) { .pp-header, .pp-grid { grid-template-columns: 1fr; } .pp-header { flex-direction: column; } .pp-name { font-family: var(--font-serif); } .pp-balance-num { font-family: var(--font-serif-alt); } .pp-trial-info h2 { font-family: var(--font-serif); } .pp-trial-card { flex-direction: column; text-align: center; align-items: center; } .pp-trial-card .btn { width: 100%; } .pp-trial-rules { justify-content: center; } .pp { overflow-x: hidden; } }
-        @media (max-width: 640px) { .pp-modal-preview { grid-template-columns: 1fr; } }
+        @media (max-width: 900px) { .pp-header, .pp-grid { grid-template-columns: 1fr; } .pp-header { flex-direction: column; } .pp-name { font-family: var(--font-serif); } .pp-balance-num { font-family: var(--font-serif-alt); } .pp { overflow-x: hidden; } }
+        @media (max-width: 640px) { .pp-modal-preview { grid-template-columns: 1fr; } .pp-coupon-bar { flex-direction: column; } .pp-coupon-input { border-right: none; border-bottom: 1px solid #000; } }
       `}</style>
     </div>
   );

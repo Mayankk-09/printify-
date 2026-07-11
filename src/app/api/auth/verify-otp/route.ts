@@ -4,23 +4,12 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { SignJWT } from "jose";
 import { prisma } from "@/lib/prisma";
-import nodemailer from "nodemailer";
-
-const globalOtpStore = new Map<string, { otp: string; expires: number }>();
-
-const transport = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 465,
-  secure: true,
-  auth: {
-    user: process.env.GMAIL_USER,
-    pass: process.env.GMAIL_APP_PASSWORD,
-  },
-});
 
 function getSecret(): Uint8Array {
-  const key = process.env.SESSION_SECRET || "printify-fallback-dev-secret-change-in-production";
-  return new TextEncoder().encode(key);
+  if (!process.env.SESSION_SECRET) {
+    throw new Error("SECURITY BLOCK: SESSION_SECRET environment variable is missing!");
+  }
+  return new TextEncoder().encode(process.env.SESSION_SECRET);
 }
 
 export async function POST(request: Request) {
@@ -31,20 +20,48 @@ export async function POST(request: Request) {
     }
 
     const sanitizedEmail = email.toLowerCase().trim();
-    const generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpExpires = new Date(Date.now() + 5 * 60 * 1000);
 
-    globalOtpStore.set(sanitizedEmail, { otp: generatedOtp, expires: Date.now() + 5 * 60 * 1000 });
+    const transport = (await import("nodemailer")).createTransport({
+      host: "smtp.gmail.com",
+      port: 465,
+      secure: true,
+      auth: {
+        user: process.env.GMAIL_USER,
+        pass: process.env.GMAIL_APP_PASSWORD,
+      },
+    });
 
-    console.log(`>>> [DEV OTP DISPATCH LOG] CODE FOR ${sanitizedEmail} IS: ${generatedOtp}`);
+    const existingUser = await prisma.user.findUnique({ where: { email: sanitizedEmail } });
+
+    if (existingUser) {
+      await prisma.user.update({
+        where: { email: sanitizedEmail },
+        data: { otpCode: otp, otpExpires, otpName: null },
+      });
+    } else {
+      await prisma.user.create({
+        data: {
+          email: sanitizedEmail,
+          name: name?.trim() || "Campus Student",
+          role: "student",
+          passwordHash: "otp-auth",
+          otpCode: otp,
+          otpExpires,
+          otpName: name?.trim() || null,
+        },
+      });
+    }
 
     await transport.sendMail({
       from: `"Printify Gateway" <${process.env.GMAIL_USER}>`,
       to: email,
       subject: "[PRINTIFY] Your Access Security Pin",
-      html: `<div style="font-family: monospace; padding: 20px; background: #F9F9F6; border: 1px solid #000;"><h2 style="margin-top: 0;">PRINTIFY IDENTITY GATEWAY</h2><p>Your confidential 6-digit access security token is: <strong style="font-size: 20px; letter-spacing: 2px;">${generatedOtp}</strong></p><p style="color: #666666; font-size: 11px;">This verification key is strictly confidential and expires inside 5 minutes.</p></div>`,
+      html: `<div style="font-family: monospace; padding: 20px; background: #F9F9F6; border: 1px solid #000;"><h2 style="margin-top: 0;">PRINTIFY IDENTITY GATEWAY</h2><p>Your confidential 6-digit access security token is: <strong style="font-size: 20px; letter-spacing: 2px;">${otp}</strong></p><p style="color: #666666; font-size: 11px;">This verification key is strictly confidential and expires inside 5 minutes.</p></div>`,
     });
 
-    return NextResponse.json({ message: "Code dispatched cleanly" }, { status: 200 });
+    return NextResponse.json({ message: "Code sent" }, { status: 200 });
   } catch (error: any) {
     return NextResponse.json(
       { error: error?.message || "Failed to send verification code" },
@@ -61,36 +78,32 @@ export async function PUT(request: Request) {
     const sanitizedOtp = otp ? otp.toString().replace(/\s/g, "").trim() : "";
     const sanitizedName = name ? name.trim() : "";
 
-    console.log("[VERIFY-OTP:PUT] email:", JSON.stringify(sanitizedEmail));
-    console.log("[VERIFY-OTP:PUT] otp:", JSON.stringify(sanitizedOtp));
-
     if (!sanitizedEmail || !sanitizedOtp) {
       return NextResponse.json({ error: "Email and code are required" }, { status: 400 });
     }
 
-    const cachedData = globalOtpStore.get(sanitizedEmail);
-    let valid = false;
-    if (cachedData && Date.now() <= cachedData.expires && cachedData.otp === sanitizedOtp) {
-      valid = true;
-      globalOtpStore.delete(sanitizedEmail);
-    }
+    const user = await prisma.user.findUnique({ where: { email: sanitizedEmail } });
 
-    if (!valid) {
+    if (!user || !user.otpCode || !user.otpExpires) {
       return NextResponse.json({ error: "Invalid or expired security code" }, { status: 401 });
     }
 
-    let user = await prisma.user.findUnique({ where: { email: sanitizedEmail } });
-
-    if (!user) {
-      user = await prisma.user.create({
-        data: {
-          email: sanitizedEmail,
-          name: sanitizedName || "Campus Student",
-          role: "student",
-          passwordHash: "otp-auth",
-        },
+    if (Date.now() > user.otpExpires.getTime()) {
+      await prisma.user.update({
+        where: { email: sanitizedEmail },
+        data: { otpCode: null, otpExpires: null, otpName: null },
       });
+      return NextResponse.json({ error: "Invalid or expired security code" }, { status: 401 });
     }
+
+    if (user.otpCode !== sanitizedOtp) {
+      return NextResponse.json({ error: "Invalid or expired security code" }, { status: 401 });
+    }
+
+    await prisma.user.update({
+      where: { email: sanitizedEmail },
+      data: { otpCode: null, otpExpires: null, otpName: null },
+    });
 
     const secret = getSecret();
     const token = await new SignJWT({

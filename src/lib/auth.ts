@@ -12,8 +12,10 @@ type AuthResult = {
 } | null;
 
 function getSecret(): Uint8Array {
-  const key = process.env.SESSION_SECRET || "printify-fallback-dev-secret-change-in-production";
-  return new TextEncoder().encode(key);
+  if (!process.env.SESSION_SECRET) {
+    throw new Error("SECURITY BLOCK: SESSION_SECRET environment variable is missing!");
+  }
+  return new TextEncoder().encode(process.env.SESSION_SECRET);
 }
 
 export async function auth(): Promise<AuthResult> {
