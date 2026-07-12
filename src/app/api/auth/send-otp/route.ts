@@ -152,7 +152,7 @@ export async function PUT(request: Request) {
       .setExpirationTime("7d")
       .sign(getSecret());
 
-    const response = NextResponse.json({ success: true, message: "Authorized" }, { status: 200 });
+    const response = NextResponse.json({ success: true, message: "Authorized", role: user!.role }, { status: 200 });
     response.cookies.set("session", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",

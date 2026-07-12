@@ -124,8 +124,8 @@ model Order {
   orderNumber     String         @unique
   userId          String
   status          OrderStatus    @default(SUBMITTED)
-  fileName        String
-  filePath        String
+  fileName        String?
+  filePath        String?
   fileSize        Int?
   pages           Int
   copies          Int            @default(1)

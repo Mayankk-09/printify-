@@ -81,6 +81,7 @@ export default function AdminOrdersClient() {
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [editingPages, setEditingPages] = useState(false);
   const [correctedPages, setCorrectedPages] = useState<number>(0);
+  const [openingFile, setOpeningFile] = useState(false);
 
   const fetchOrders = useCallback(async () => {
     setLoading(true);
@@ -139,6 +140,20 @@ export default function AdminOrdersClient() {
       fetchOrders();
     } catch (err: any) {
       toast.error(err.message || "Failed to update page count");
+    }
+  };
+
+  const openFile = async (storagePath: string) => {
+    setOpeningFile(true);
+    try {
+      const res = await fetch(`/api/files/signed-url?path=${encodeURIComponent(storagePath)}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to load file");
+      window.open(data.url, "_blank", "noopener,noreferrer");
+    } catch (err: any) {
+      toast.error(err.message || "Unable to load file");
+    } finally {
+      setOpeningFile(false);
     }
   };
 
@@ -264,7 +279,7 @@ export default function AdminOrdersClient() {
                     <tr key={o.id}>
                       <td>
                         <strong className="ao-order-num">{o.orderNumber}</strong>
-                        <small>{o.fileName}</small>
+                        <small>{o.fileName || "—"}</small>
                       </td>
                       <td>
                         <strong>{o.user.name}</strong>
@@ -342,7 +357,7 @@ export default function AdminOrdersClient() {
                 </div>
                 <div className="ao-mc-row">
                   <span>File</span>
-                  <span>{o.fileName}</span>
+                  <span>{o.fileName || "—"}</span>
                 </div>
                 <div className="ao-mc-row">
                   <span>Pages</span>
@@ -401,7 +416,7 @@ export default function AdminOrdersClient() {
               <div>
                 <span className="eyebrow">{selectedOrder.orderNumber}</span>
                 <h2 className="font-black" style={{ marginTop: 4, fontSize: "1.15rem" }}>
-                  {selectedOrder.fileName}
+                  {selectedOrder.fileName || "Document"}
                 </h2>
               </div>
               <button className="btn btn-ghost" onClick={() => setSelectedOrder(null)} type="button" style={{ width: 32, height: 32, padding: 0 }}>
@@ -418,7 +433,18 @@ export default function AdminOrdersClient() {
               </div>
               <div className="ao-detail-section">
                 <h3>Document</h3>
-                <p><strong>{selectedOrder.fileName}</strong></p>
+                <p><strong>{selectedOrder.fileName || "Document removed (retention expired)"}</strong></p>
+                {selectedOrder.filePath && (
+                  <button
+                    className="btn btn-ghost btn-sm"
+                    type="button"
+                    disabled={openingFile}
+                    onClick={() => openFile(selectedOrder.filePath)}
+                    style={{ fontSize: "0.75rem", padding: "4px 8px", minHeight: "auto", marginTop: 4, textDecoration: "underline", cursor: "pointer" }}
+                  >
+                    {openingFile ? "Loading..." : "View Document"}
+                  </button>
+                )}
                 {selectedOrder.pageCountPending && (
                   <p className="text-warning" style={{ color: "#fbbf24", fontSize: "0.78rem" }}>
                     Page count pending — needs verification

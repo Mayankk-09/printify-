@@ -28,6 +28,8 @@ export default function AdminSettingsPage() {
     slots: "09:00-10:40,10:40-12:20,12:20-14:00,14:00-15:40,15:40-17:20",
   });
   const [loading, setLoading] = useState(true);
+  const [cleanupRunning, setCleanupRunning] = useState(false);
+  const [cleanupResult, setCleanupResult] = useState<any>(null);
 
   useEffect(() => {
     fetch("/api/admin/settings")
@@ -67,6 +69,32 @@ export default function AdminSettingsPage() {
       toast.success("Settings saved");
     } catch (err: any) {
       toast.error(err.message);
+    }
+  };
+
+  const runCleanup = async (type: "document" | "user") => {
+    const label = type === "user" ? "User Cleanup" : "Document Cleanup";
+    if (type === "user") {
+      const confirmed = window.confirm(
+        "This will permanently delete ALL student accounts and their data. Admins will be preserved. Continue?"
+      );
+      if (!confirmed) return;
+    }
+
+    setCleanupRunning(true);
+    setCleanupResult(null);
+    try {
+      const res = await fetch(`/api/admin/cleanup?type=${type}`, {
+        method: "POST",
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || `${label} failed`);
+      setCleanupResult(data);
+      toast.success(`${label} completed`);
+    } catch (err: any) {
+      toast.error(err.message || "Cleanup failed");
+    } finally {
+      setCleanupRunning(false);
     }
   };
 
@@ -143,6 +171,75 @@ export default function AdminSettingsPage() {
           <button className="btn btn-primary" onClick={handleSave} type="button">
             Save all settings
           </button>
+
+          <div className="glass-card" style={{ marginTop: 24 }}>
+            <h2 className="font-black" style={{ marginBottom: 16, fontSize: "1.1rem" }}>Cleanup</h2>
+            <p className="text-secondary text-sm" style={{ marginBottom: 16 }}>
+              Document cleanup removes files from storage 48 hours after an order is collected.
+              User cleanup deletes all student accounts and their data.
+            </p>
+
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: cleanupResult ? 16 : 0 }}>
+              <button
+                className="btn btn-secondary"
+                type="button"
+                disabled={cleanupRunning}
+                onClick={() => runCleanup("document")}
+              >
+                {cleanupRunning ? "Running..." : "Run Document Cleanup Now"}
+              </button>
+              <button
+                className="btn btn-ghost"
+                type="button"
+                disabled={cleanupRunning}
+                onClick={() => runCleanup("user")}
+                style={{ color: "#fb7185", borderColor: "rgba(251,113,133,0.3)" }}
+              >
+                {cleanupRunning ? "Running..." : "Run User Cleanup (DANGER)"}
+              </button>
+            </div>
+
+            {cleanupResult && (
+              <div className="cleanup-result" style={{
+                border: "1px solid var(--border-primary)",
+                padding: 14,
+                marginTop: 8,
+                fontSize: "0.82rem",
+                background: "var(--bg-elevated)",
+              }}>
+                <strong style={{ display: "block", marginBottom: 8 }}>
+                  {cleanupResult.type === "document" ? "Document Cleanup" : "User Cleanup"} Results
+                </strong>
+                {cleanupResult.type === "document" ? (
+                  <div style={{ display: "grid", gap: 4 }}>
+                    <div>Orders processed: <strong>{cleanupResult.ordersProcessed}</strong></div>
+                    <div>Files deleted: <strong>{cleanupResult.filesDeleted}</strong></div>
+                    <div>Records cleaned: <strong>{cleanupResult.recordsCleaned}</strong></div>
+                    <div>Skipped: <strong>{cleanupResult.skipped}</strong></div>
+                    <div>Time: <strong>{cleanupResult.elapsed}ms</strong></div>
+                    {cleanupResult.errors?.length > 0 && (
+                      <div style={{ color: "#fb7185", marginTop: 4 }}>
+                        Errors: {cleanupResult.errors.join("; ")}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div style={{ display: "grid", gap: 4 }}>
+                    <div>Users deleted: <strong>{cleanupResult.usersDeleted}</strong></div>
+                    <div>Storage files deleted: <strong>{cleanupResult.storageFilesDeleted}</strong></div>
+                    <div>Storage files failed: <strong>{cleanupResult.storageFilesFailed}</strong></div>
+                    <div>DB records cleaned: <strong>{cleanupResult.dbRecordsDeleted}</strong></div>
+                    <div>Time: <strong>{cleanupResult.elapsed}ms</strong></div>
+                    {cleanupResult.errors?.length > 0 && (
+                      <div style={{ color: "#fb7185", marginTop: 4 }}>
+                        Errors: {cleanupResult.errors.join("; ")}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </>
       )}
 

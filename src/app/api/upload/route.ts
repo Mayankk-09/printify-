@@ -1,11 +1,10 @@
 import { NextResponse } from "next/server";
-import { writeFile, mkdir } from "fs/promises";
 import path from "path";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { extractPageCount } from "@/lib/pageCount";
+import { uploadToStorage, getStoragePath } from "@/lib/supabase-storage";
 
-const UPLOAD_DIR = path.resolve(process.cwd(), "uploads");
 const MAX_FILE_SIZE = 15 * 1024 * 1024;
 const ALLOWED_EXTENSIONS = [".pdf", ".doc", ".docx", ".ppt", ".pptx"];
 const REJECTED_EXTENSIONS = [".exe", ".zip", ".rar"];
@@ -46,12 +45,24 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "File size must be 15MB or less" }, { status: 400 });
     }
 
-    await mkdir(UPLOAD_DIR, { recursive: true });
-
-    const uniqueName = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}-${file.name.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
-    const filePath = path.join(UPLOAD_DIR, uniqueName);
     const buffer = Buffer.from(await file.arrayBuffer());
-    await writeFile(filePath, buffer);
+    const storagePath = getStoragePath(userId, file.name);
+    const contentType = file.type || "application/octet-stream";
+
+    console.log("[Upload] Received file:", {
+      name: file.name,
+      type: file.type,
+      size: file.size,
+      instanceofFile: file instanceof File,
+      instanceofBlob: file instanceof Blob,
+      bufferLength: buffer.length,
+      ext,
+      userId,
+      generatedPath: storagePath,
+      contentType,
+    });
+
+    await uploadToStorage(buffer, storagePath, contentType);
 
     const { pages, pending } = await extractPageCount(buffer, ext);
 
@@ -59,8 +70,8 @@ export async function POST(request: Request) {
       data: {
         userId,
         originalName: file.name,
-        storedPath: `/uploads/${uniqueName}`,
-        mimeType: file.type || "application/octet-stream",
+        storedPath: storagePath,
+        mimeType: contentType,
         size: file.size,
         pageCount: pages,
         pageCountPending: pending,
@@ -69,7 +80,7 @@ export async function POST(request: Request) {
 
     const response: Record<string, any> = {
       fileName: file.name,
-      filePath: `/uploads/${uniqueName}`,
+      filePath: storagePath,
       fileSize: file.size,
       pages,
     };

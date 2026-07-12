@@ -1,37 +1,25 @@
 import { PrismaClient } from "@prisma/client";
+import { runUserCleanup } from "../src/lib/cleanup";
 
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log("Clearing all student data...");
+  console.log("Clearing all student data (including Supabase Storage files)...\n");
 
-  const students = await prisma.user.findMany({
-    where: { role: "student" },
-    select: { id: true },
-  });
+  const result = await runUserCleanup();
 
-  const ids = students.map((s) => s.id);
-  if (!ids.length) {
-    console.log("No student data found.");
-    return;
+  console.log("\n--- Results ---");
+  console.log(`Users deleted:          ${result.usersDeleted}`);
+  console.log(`Storage files deleted:  ${result.storageFilesDeleted}`);
+  console.log(`Storage files failed:   ${result.storageFilesFailed}`);
+  console.log(`DB records cleaned:     ${result.dbRecordsDeleted}`);
+
+  if (result.errors.length > 0) {
+    console.log(`\nErrors (${result.errors.length}):`);
+    result.errors.forEach((e) => console.log(`  - ${e}`));
   }
 
-  const orders = await prisma.order.findMany({
-    where: { userId: { in: ids } },
-    select: { id: true },
-  });
-  const orderIds = orders.map((o) => o.id);
-
-  await prisma.$transaction([
-    prisma.pickupCode.deleteMany({ where: { orderId: { in: orderIds } } }),
-    prisma.order.deleteMany({ where: { id: { in: orderIds } } }),
-    prisma.payment.deleteMany({ where: { userId: { in: ids } } }),
-    prisma.subscription.deleteMany({ where: { userId: { in: ids } } }),
-    prisma.uploadedFile.deleteMany({ where: { userId: { in: ids } } }),
-    prisma.user.deleteMany({ where: { id: { in: ids } } }),
-  ]);
-
-  console.log(`Deleted ${ids.length} students and all their data. Admin preserved.`);
+  console.log("\nAdmin accounts preserved.");
 }
 
 main()

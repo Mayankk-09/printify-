@@ -29,7 +29,7 @@ export default function HistoryOrdersClient({ orders: initialOrders }: { orders:
   const filteredOrders = useMemo(() => {
     return orders.filter((o: any) => {
       const sf = statusFilter === "all" || o.status === statusFilter;
-      const ss = o.fileName.toLowerCase().includes(search.toLowerCase());
+      const ss = (o.fileName || "").toLowerCase().includes(search.toLowerCase());
       let sd = true;
       if (dateRange) {
         const orderDate = new Date(o.createdAt).toISOString().slice(0, 10);
@@ -38,6 +38,17 @@ export default function HistoryOrdersClient({ orders: initialOrders }: { orders:
       return sf && ss && sd;
     });
   }, [orders, statusFilter, search, dateRange]);
+
+  const openFile = async (storagePath: string) => {
+    try {
+      const res = await fetch(`/api/files/signed-url?path=${encodeURIComponent(storagePath)}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to load file");
+      window.open(data.url, "_blank", "noopener,noreferrer");
+    } catch {
+      alert("Unable to load file. It may have been removed.");
+    }
+  };
 
   return (
     <div className="ho fade-in">
@@ -91,9 +102,20 @@ export default function HistoryOrdersClient({ orders: initialOrders }: { orders:
                     {filteredOrders.map((o: any) => (
                       <tr key={o.id}>
                         <td>
-                          <a href={o.filePath} target="_blank" rel="noopener noreferrer">
-                            {o.fileName}
-                          </a>
+                          {o.filePath ? (
+                            <button
+                              type="button"
+                              className="btn btn-ghost btn-sm"
+                              style={{ fontSize: "0.82rem", padding: "2px 6px", minHeight: "auto", textDecoration: "underline", cursor: "pointer" }}
+                              onClick={() => openFile(o.filePath)}
+                            >
+                              {o.fileName || "Document"}
+                            </button>
+                          ) : (
+                            <span style={{ fontSize: "0.82rem", color: "var(--text-muted)" }}>
+                              {o.fileName || "Document removed"}
+                            </span>
+                          )}
                         </td>
                         <td>{o.pages}</td>
                         <td>{o.copies}</td>
@@ -124,7 +146,7 @@ export default function HistoryOrdersClient({ orders: initialOrders }: { orders:
                 <div key={o.id} className="glass-card ho-mobile-card">
                   <div className="ho-mc-head">
                     <div>
-                      <strong>{o.fileName}</strong>
+                      <strong>{o.fileName || "Document"}</strong>
                       <span className="text-muted text-sm">{o.pages}p × {o.copies}c</span>
                     </div>
                     <span className={`status-badge status-${o.status}`}>

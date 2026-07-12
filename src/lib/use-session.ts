@@ -52,7 +52,7 @@ export function useSession() {
       // proceed with redirect even if request fails
     }
     setState({ isLoaded: true, isSignedIn: false, user: null });
-    router.push(opts?.redirectUrl || "/");
+    router.push(opts?.redirectUrl || "/login");
   };
 
   return { ...state, signOut };
