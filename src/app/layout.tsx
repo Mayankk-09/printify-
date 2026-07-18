@@ -7,7 +7,11 @@ import PwaPrompt from "@/components/PwaPrompt";
 export const metadata: Metadata = {
   title: "Printify — Campus Printing Platform",
   description: "Upload documents, manage subscriptions, and track print jobs.",
+  icons: {
+    icon: "/branding/logo-full.png?v=3", // ← Clean route directly to public/favicon.png with fresh v=3 cache-buster
+  },
 };
+
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -23,7 +27,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+        <link rel="icon" type="image/png" href="/branding/logo-full.png?v=3" />
         <link rel="manifest" href="/manifest.json" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black" />
