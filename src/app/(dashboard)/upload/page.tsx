@@ -4,6 +4,8 @@ import { redirect } from "next/navigation";
 import UploadPrintClient from "./UploadPrintClient";
 import { getPickupSettings } from "@/lib/pickup";
 
+export const dynamic = "force-dynamic";
+
 export default async function UploadPage() {
   const session = await auth();
 

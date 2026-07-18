@@ -254,7 +254,7 @@ export async function POST(request: Request) {
             addonId: a.id,
             name: a.name,
             price: a.price,
-            quantity: numCopies,
+            quantity: 1,
           })),
         });
       }

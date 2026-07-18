@@ -1,4 +1,4 @@
-const CACHE = "printify-static-v1";
+const CACHE = "printify-static-v2";
 
 self.addEventListener("install", (event) => {
   self.skipWaiting();

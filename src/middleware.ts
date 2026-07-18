@@ -39,22 +39,26 @@ export async function middleware(request: NextRequest) {
 
   if (isProtected(pathname)) {
     const token = request.cookies.get("session")?.value;
+
     if (!token) {
-      return NextResponse.redirect(new URL("/login", request.url));
+      return NextResponse.rewrite(new URL("/login", request.url));
     }
+
+    let payload;
     try {
-      const { payload } = await jwtVerify(token, getSecret(), { algorithms: ["HS256"] });
-
-      if (isAdminPath(pathname) && payload.role !== "admin") {
-        return NextResponse.redirect(new URL("/dashboard", request.url));
-      }
-
-      return NextResponse.next();
+      const verified = await jwtVerify(token, getSecret(), { algorithms: ["HS256"] });
+      payload = verified.payload;
     } catch {
-      const res = NextResponse.redirect(new URL("/login", request.url));
+      const res = NextResponse.rewrite(new URL("/login", request.url));
       res.cookies.delete("session");
       return res;
     }
+
+    if (isAdminPath(pathname) && payload.role !== "admin") {
+      return NextResponse.rewrite(new URL("/dashboard", request.url));
+    }
+
+    return NextResponse.next();
   }
 
   return NextResponse.next();

@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import CurrentOrdersClient from "./CurrentOrdersClient";
 
+export const dynamic = "force-dynamic";
+
 export default async function CurrentOrdersPage() {
   const session = await auth();
   if (!session?.user) redirect("/login");
