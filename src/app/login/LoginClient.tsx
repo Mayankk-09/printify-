@@ -124,7 +124,7 @@ export default function LoginClient() {
         body: JSON.stringify({ email: email.trim(), otp: combinedOtp, name: name.trim() }),
       });
       if (res.status === 200 || res.ok) {
-        router.push("/");
+        router.push("/dashboard");
         return;
       } else {
         const data = await res.json();

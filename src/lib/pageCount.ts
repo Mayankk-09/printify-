@@ -1,3 +1,5 @@
+import zlib from "zlib";
+
 function countPdfPages(buffer: Buffer): number | null {
   try {
     const text = buffer.toString("utf-8");
@@ -55,21 +57,96 @@ function countPptSlides(buffer: Buffer): number {
   return 0;
 }
 
-function estimateDocPages(buffer: Buffer): number {
+function inflateZipEntry(compressedData: Buffer, compressionMethod: number): Buffer | null {
   try {
-    const text = buffer.toString("utf-8");
-    const paraRegex = /<w:p[ >]/g;
-    const paras = text.match(paraRegex);
-    if (paras && paras.length > 0) {
-      return Math.max(1, Math.ceil(paras.length / 25));
+    if (compressionMethod === 0) {
+      return compressedData;
     }
-    const pageRegex = /<w:lastRenderedPageBreak[ >]|<w:pageBreakBefore[ >]/gi;
-    const pageBreaks = text.match(pageRegex);
-    if (pageBreaks && pageBreaks.length > 0) {
-      return pageBreaks.length + 1;
+    if (compressionMethod === 8) {
+      return zlib.inflateRawSync(compressedData);
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+function extractFromZip(buffer: Buffer, targetPath: string): Buffer | null {
+  try {
+    let offset = 0;
+    while (offset + 30 <= buffer.length) {
+      const sig = buffer.readUInt32LE(offset);
+      if (sig !== 0x04034b50) break;
+
+      const compressionMethod = buffer.readUInt16LE(offset + 8);
+      const compressedSize = buffer.readUInt32LE(offset + 18);
+      const uncompressedSize = buffer.readUInt32LE(offset + 22);
+      const fileNameLen = buffer.readUInt16LE(offset + 26);
+      const extraLen = buffer.readUInt16LE(offset + 28);
+      const fileName = buffer.toString("utf-8", offset + 30, offset + 30 + fileNameLen);
+      const dataStart = offset + 30 + fileNameLen + extraLen;
+
+      if (fileName === targetPath) {
+        const compressedData = buffer.slice(dataStart, dataStart + compressedSize);
+        return inflateZipEntry(compressedData, compressionMethod);
+      }
+
+      offset = dataStart + compressedSize;
     }
   } catch {}
+  return null;
+}
+
+function countDocxPageBreaks(xml: string): number {
+  let pageCount = 1;
+
+  const lastRendered = xml.match(/<w:lastRenderedPageBreak[\s\/]/g);
+  if (lastRendered) {
+    pageCount += lastRendered.length;
+  }
+
+  const explicitBreaks = xml.match(/<w:br[^>]*w:type="page"[^>]*\/>/g);
+  if (explicitBreaks) {
+    pageCount += explicitBreaks.length;
+  }
+
+  const sectionBreaks = xml.match(/<w:sectPr[\s>]/g);
+  if (sectionBreaks && sectionBreaks.length > 1) {
+    pageCount += sectionBreaks.length - 1;
+  }
+
+  return pageCount;
+}
+
+function estimateDocPagesFromXml(xml: string): number {
+  const paras = xml.match(/<w:p[\s>]/g);
+  const paraCount = paras ? paras.length : 0;
+
+  if (paraCount > 0) {
+    return Math.max(1, Math.ceil(paraCount / 30));
+  }
+
   return 0;
+}
+
+function countDocxPages(buffer: Buffer): { pages: number; pending: boolean } {
+  const xml = extractFromZip(buffer, "word/document.xml");
+
+  if (xml) {
+    const xmlStr = xml.toString("utf-8");
+    const pagesFromBreaks = countDocxPageBreaks(xmlStr);
+    if (pagesFromBreaks > 1) {
+      return { pages: pagesFromBreaks, pending: false };
+    }
+
+    const pagesFromParas = estimateDocPagesFromXml(xmlStr);
+    if (pagesFromParas > 0) {
+      return { pages: pagesFromParas, pending: false };
+    }
+  }
+
+  const fallback = estimateDocBinaryPages(buffer);
+  return { pages: fallback, pending: fallback <= 1 };
 }
 
 function estimateDocBinaryPages(buffer: Buffer): number {
@@ -126,13 +203,7 @@ export async function extractPageCount(
   }
 
   if (lowerExt === ".docx") {
-    const docPages = estimateDocPages(buffer);
-    if (docPages > 0) {
-      return { pages: docPages, pending: false };
-    }
-    const sizeKB = buffer.length / 1024;
-    const estimated = Math.max(1, Math.round(sizeKB / 12));
-    return { pages: estimated, pending: true };
+    return countDocxPages(buffer);
   }
 
   if (lowerExt === ".doc") {
