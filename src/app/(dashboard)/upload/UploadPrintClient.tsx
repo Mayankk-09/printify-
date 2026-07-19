@@ -119,11 +119,7 @@ export default function UploadPrintClient({
       if (!res.ok) throw new Error(data.error || "Upload failed");
       setFileDetails(data);
       setUploadProgress(100);
-      if (data.pageCountPending) {
-        toast.success(`Uploaded. ${data.warning || "Page count will be verified."}`);
-      } else {
-        toast.success(`Uploaded. ${data.pages} pages detected.`);
-      }
+      toast.success(`Uploaded. ${data.pages} page${data.pages !== 1 ? "s" : ""} detected.`);
     } catch (err: any) {
       setFile(null);
       setFileDetails(null);
@@ -164,7 +160,7 @@ export default function UploadPrintClient({
   const printablePages = pagesPerDoc * numCopies;
 
   const activeAddons = addons.filter((a) => selectedAddonIds.includes(a.id));
-  const addonPrices = activeAddons.map((a) => ({ price: a.price, quantity: 1 }));
+  const addonPrices = activeAddons.map((a) => ({ price: a.price }));
   const trialMaxPagesSetting = 5;
 const isTrialEligible = trialActive && color === "bw" && printablePages <= trialMaxPagesSetting && addonPrices.length === 0;
 
@@ -183,6 +179,8 @@ const isTrialEligible = trialActive && color === "bw" && printablePages <= trial
 
   const packCoversColor = packType === "BW_AND_COLOR";
   const colorBlocked = hasPack && packType === "BW_ONLY" && color === "color";
+
+  const needsPayment = breakdown.grandTotal > 0 && !trialUsed;
 
   const showUpsell = !hasPack && !trialActive && fileDetails && !upsellDismissed && printablePages > 0 && breakdown.grandTotal > 0;
 
@@ -536,7 +534,7 @@ const isTrialEligible = trialActive && color === "bw" && printablePages <= trial
             <button
               className="btn btn-primary w-100 mt-3"
               type="button"
-              disabled={!fileDetails || submitting || !selectedSlot}
+              disabled={!fileDetails || submitting || (!selectedSlot && !needsPayment)}
               onClick={handleSubmit}
             >
               {submitting ? (
@@ -545,8 +543,8 @@ const isTrialEligible = trialActive && color === "bw" && printablePages <= trial
                 "Upload a document"
               ) : trialUsed ? (
                 "PLACE ORDER via PAGE CREDITS"
-              ) : breakdown.grandTotal > 0 ? (
-                <span className="pay-btn-text">Pay {formatPrice(breakdown.grandTotal)} via Razorpay</span>
+              ) : needsPayment ? (
+                <span className="pay-btn-text">PROCEED TO PAY VIA UPI // SECURE via RAZORPAY</span>
               ) : (
                 "PLACE ORDER via PAGE CREDITS"
               )}

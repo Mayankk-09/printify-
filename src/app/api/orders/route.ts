@@ -116,7 +116,6 @@ export async function POST(request: Request) {
 
     const addonPrices = addons.map((a) => ({
       price: a.price,
-      quantity: 1,
     }));
 
     const isTrialEligible = user.hasClaimedTrial && !user.hasUsedTrial;
