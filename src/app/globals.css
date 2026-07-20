@@ -501,6 +501,21 @@ h3 { font-size: clamp(1rem, 2vw, 1.3rem); }
 .custom-select-option:hover { background: var(--bg-elevated); }
 .custom-select-option.selected { background: var(--bg-black); color: #fff; }
 
+/* ── Reduced Motion ── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ── Focus Visible ── */
+:focus-visible {
+  outline: 2px solid #000;
+  outline-offset: 2px;
+}
+
 /* ── Mobile @media overrides ── */
 @media (max-width: 860px) {
   .container { padding: 0 16px; }
