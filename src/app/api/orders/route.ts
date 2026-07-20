@@ -116,7 +116,6 @@ export async function POST(request: Request) {
 
     const addonPrices = addons.map((a) => ({
       price: a.price,
-      quantity: numCopies,
     }));
 
     const isTrialEligible = user.hasClaimedTrial && !user.hasUsedTrial;
@@ -254,7 +253,7 @@ export async function POST(request: Request) {
             addonId: a.id,
             name: a.name,
             price: a.price,
-            quantity: numCopies,
+            quantity: 1,
           })),
         });
       }

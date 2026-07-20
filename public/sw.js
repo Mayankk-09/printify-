@@ -1,14 +1,6 @@
-const CACHE = "printify-static-v1";
-
-const ASSETS = [
-  "/",
-  "/manifest.json",
-];
+const CACHE = "printify-static-v2";
 
 self.addEventListener("install", (event) => {
-  event.waitUntil(
-    caches.open(CACHE).then((cache) => cache.addAll(ASSETS))
-  );
   self.skipWaiting();
 });
 
@@ -23,23 +15,44 @@ self.addEventListener("activate", (event) => {
 
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
+
   if (event.request.url.includes("/api/")) {
     event.respondWith(networkFirst(event.request));
-  } else {
-    event.respondWith(cacheFirst(event.request));
+    return;
   }
-});
 
-function cacheFirst(request) {
-  return caches.match(request).then((cached) => cached || fetch(request));
-}
+  if (event.request.mode === "navigate") {
+    event.respondWith(networkFirst(event.request));
+    return;
+  }
+
+  event.respondWith(staleWhileRevalidate(event.request));
+});
 
 function networkFirst(request) {
   return fetch(request)
     .then((res) => {
-      const clone = res.clone();
-      caches.open(CACHE).then((cache) => cache.put(request, clone));
+      if (res.ok) {
+        const clone = res.clone();
+        caches.open(CACHE).then((cache) => cache.put(request, clone));
+      }
       return res;
     })
     .catch(() => caches.match(request));
+}
+
+function staleWhileRevalidate(request) {
+  return caches.match(request).then((cached) => {
+    const fetching = fetch(request)
+      .then((res) => {
+        if (res.ok) {
+          const clone = res.clone();
+          caches.open(CACHE).then((cache) => cache.put(request, clone));
+        }
+        return res;
+      })
+      .catch(() => cached);
+
+    return cached || fetching;
+  });
 }

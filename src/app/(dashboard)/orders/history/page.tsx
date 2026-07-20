@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import HistoryOrdersClient from "./HistoryOrdersClient";
 
+export const dynamic = "force-dynamic";
+
 export default async function HistoryOrdersPage() {
   const session = await auth();
   if (!session?.user) redirect("/login");

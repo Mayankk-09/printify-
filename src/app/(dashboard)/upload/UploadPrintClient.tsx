@@ -119,11 +119,7 @@ export default function UploadPrintClient({
       if (!res.ok) throw new Error(data.error || "Upload failed");
       setFileDetails(data);
       setUploadProgress(100);
-      if (data.pageCountPending) {
-        toast.success(`Uploaded. ${data.warning || "Page count will be verified."}`);
-      } else {
-        toast.success(`Uploaded. ${data.pages} pages detected.`);
-      }
+      toast.success(`Uploaded. ${data.pages} page${data.pages !== 1 ? "s" : ""} detected.`);
     } catch (err: any) {
       setFile(null);
       setFileDetails(null);
@@ -164,7 +160,7 @@ export default function UploadPrintClient({
   const printablePages = pagesPerDoc * numCopies;
 
   const activeAddons = addons.filter((a) => selectedAddonIds.includes(a.id));
-  const addonPrices = activeAddons.map((a) => ({ price: a.price, quantity: numCopies }));
+  const addonPrices = activeAddons.map((a) => ({ price: a.price }));
   const trialMaxPagesSetting = 5;
 const isTrialEligible = trialActive && color === "bw" && printablePages <= trialMaxPagesSetting && addonPrices.length === 0;
 
@@ -184,11 +180,12 @@ const isTrialEligible = trialActive && color === "bw" && printablePages <= trial
   const packCoversColor = packType === "BW_AND_COLOR";
   const colorBlocked = hasPack && packType === "BW_ONLY" && color === "color";
 
+  const needsPayment = breakdown.grandTotal > 0 && !trialUsed;
+
   const showUpsell = !hasPack && !trialActive && fileDetails && !upsellDismissed && printablePages > 0 && breakdown.grandTotal > 0;
 
   const handleSubmit = async () => {
     if (!fileDetails) { toast.error("Upload a document first."); return; }
-    if (colorBlocked) { toast.error("Your current pack only supports black & white printing."); return; }
 
     const orderPayload: Record<string, any> = {
       fileName: fileDetails.fileName,
@@ -368,9 +365,6 @@ const isTrialEligible = trialActive && color === "bw" && printablePages <= trial
                     <strong>{fileDetails.fileName}</strong>
                     <span>{fileDetails.pages} pages / {((file?.size || 0) / 1024 / 1024).toFixed(1)}MB</span>
                     <span className="text-sm text-muted">Printable pages: {printablePages} ({pagesPerDoc} × {numCopies})</span>
-                    {fileDetails.pageCountPending && (
-                      <span style={{ fontSize: "0.7rem", color: "#fbbf24" }}>Page count pending — will be verified</span>
-                    )}
                   </div>
                   <button type="button" className="up-file-remove" onClick={(e) => { e.stopPropagation(); clearFile(); }}>✕</button>
                 </div>
@@ -392,8 +386,8 @@ const isTrialEligible = trialActive && color === "bw" && printablePages <= trial
                   <button type="button" className={color === "color" ? "active" : ""} onClick={() => setColor("color")}>Color</button>
                 </div>
                 {colorBlocked && (
-                  <span style={{ color: "#fb7185", fontSize: "0.75rem", marginTop: 4, display: "block" }}>
-                    Your pack only supports B&W printing.
+                  <span style={{ color: "#fbbf24", fontSize: "0.75rem", marginTop: 4, display: "block" }}>
+                    Color printing will be charged separately (not covered by your B&W pack).
                   </span>
                 )}
               </div>
@@ -518,7 +512,7 @@ const isTrialEligible = trialActive && color === "bw" && printablePages <= trial
                   <div><span>Extra charge ({chargeablePages} pages)</span><strong>{formatPrice(breakdown.extraCharge)}</strong></div>
                 )}
                 {breakdown.addonCost > 0 && (
-                  <div><span>Add-ons ({numCopies}×)</span><strong>{formatPrice(breakdown.addonCost)}</strong></div>
+                  <div><span>Add-ons</span><strong>{formatPrice(breakdown.addonCost)}</strong></div>
                 )}
                 <div className="up-total"><span>Total</span><strong>{formatPrice(breakdown.grandTotal)}</strong></div>
               </div>
@@ -532,15 +526,15 @@ const isTrialEligible = trialActive && color === "bw" && printablePages <= trial
             )}
 
             {colorBlocked && (
-              <div className="alert-card" style={{ borderColor: "rgba(251,113,133,0.25)", background: "rgba(251,113,133,0.08)", color: "#fb7185", borderRadius: 10, padding: "10px 14px", fontSize: "0.8rem", marginTop: 12 }}>
-                Your pack only supports black-and-white printing. Switch to B&W or buy a B&W+Color pack.
+              <div className="alert-card" style={{ borderColor: "rgba(251,191,36,0.25)", background: "rgba(251,191,36,0.08)", color: "#fbbf24", borderRadius: 10, padding: "10px 14px", fontSize: "0.8rem", marginTop: 12 }}>
+                Your B&W pack won't cover color printing. You'll be charged separately via Razorpay.
               </div>
             )}
 
             <button
               className="btn btn-primary w-100 mt-3"
               type="button"
-              disabled={!fileDetails || submitting || !selectedSlot}
+              disabled={!fileDetails || submitting || (!selectedSlot && !needsPayment)}
               onClick={handleSubmit}
             >
               {submitting ? (
@@ -549,8 +543,8 @@ const isTrialEligible = trialActive && color === "bw" && printablePages <= trial
                 "Upload a document"
               ) : trialUsed ? (
                 "PLACE ORDER via PAGE CREDITS"
-              ) : breakdown.grandTotal > 0 ? (
-                `PROCEED TO PAY ${formatPrice(breakdown.grandTotal)} // SECURE via RAZORPAY`
+              ) : needsPayment ? (
+                <span className="pay-btn-text">PROCEED TO PAY VIA UPI // SECURE via RAZORPAY</span>
               ) : (
                 "PLACE ORDER via PAGE CREDITS"
               )}
@@ -670,6 +664,7 @@ const isTrialEligible = trialActive && color === "bw" && printablePages <= trial
         .pay-total { border-bottom: none !important; border-top: 2px solid var(--border-primary); padding-top: 8px; font-weight: 800; font-size: 1rem !important; }
         .pay-total strong { }
         .pay-actions { display: flex; gap: 10px; margin-top: 16px; }
+        .pay-btn-text { display: inline-flex; align-items: center; gap: 4px; text-align: center; justify-content: center; width: 100%; }
         @media (max-width: 960px) { .up-layout { grid-template-columns: 1fr; } .up-side { position: static; } }
         @media (max-width: 720px) {
           .up-config { grid-template-columns: 1fr; gap: 8px; }

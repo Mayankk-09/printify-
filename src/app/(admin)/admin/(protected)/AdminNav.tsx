@@ -26,8 +26,14 @@ export default function AdminNav({ user }: { user: any }) {
       <aside className={`admin-sidebar ${collapsed ? "collapsed" : ""}`}>
         <div className="admin-sidebar-header">
           <Link href="/admin/dashboard" className="admin-brand">
-            <span className="brand-mark">P</span>
-            {!collapsed && <span className="brand-name">Printify</span>}
+            <div className="brand-mark" style={{ width: "32px", height: "32px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+  <img
+    src="/branding/logo-mark.png?v=2"
+    alt="Logo Mark"
+    style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }}
+  />
+</div>
+{!collapsed && <span className="brand-name">Printify</span>}
           </Link>
           <button className="admin-collapse-btn" onClick={() => setCollapsed(!collapsed)} type="button">
             {collapsed ? "→" : "←"}

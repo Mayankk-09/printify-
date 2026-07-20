@@ -46,7 +46,14 @@ export default function Sidebar() {
       <aside className={`sidebar ${open ? "sidebar-open" : ""}`}>
         <div className="sidebar-header">
           <Link href={isSignedIn ? "/dashboard" : "/login"} className="sidebar-brand">
-            <span className="brand-mark">P</span>
+            <div className="brand-mark" style={{ width: "32px", height: "32px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+  <img
+    src="/branding/logo-mark.png?v=2"
+    alt="Logo Mark"
+    style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }}
+  />
+</div>
+
             <span className="brand-name">Printify</span>
           </Link>
         </div>

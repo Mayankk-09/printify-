@@ -7,7 +7,7 @@ export type CostBreakdown = {
   documentCost: number; // pages * copies * pagePrice
   packDiscount: number; // pages covered by pack * pagePrice (negative = saving)
   extraCharge: number;  // chargeable pages * pagePrice
-  addonCost: number;    // sum of addons
+  addonCost: number;    // ONE-TIME flat fee — never multiplied by copies
   grandTotal: number;   // total to pay in paise
 };
 
@@ -21,7 +21,7 @@ export function calculateOrderCost(params: {
   pages: number;
   copies: number;
   printMode: "BW" | "COLOR";
-  addonPrices: Array<{ price: number; quantity: number }>;
+  addonPrices: Array<{ price: number }>;
   remainingPackPages: number;
   packType: "BW_ONLY" | "BW_AND_COLOR" | null;
   isTrialEligible: boolean;
@@ -75,7 +75,7 @@ export function calculateOrderCost(params: {
   }
 
   const extraCharge = chargeablePages * pagePrice;
-  const addonCost = params.addonPrices.reduce((sum, a) => sum + a.price * a.quantity, 0);
+  const addonCost = params.addonPrices.reduce((sum, a) => sum + a.price, 0);
   const grandTotal = extraCharge + addonCost;
 
   return {
