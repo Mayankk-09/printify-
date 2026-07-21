@@ -38,32 +38,48 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Invalid pack" }, { status: 400 });
     }
 
-    const subscription = await prisma.subscription.create({
-      data: {
-        userId,
-        packId: pack.id,
-        packType: pack.packType,
-        pagesAllowed: pack.pages,
-        pagesUsed: 0,
-        packPrice: pack.price,
-        status: "active",
-      },
-      include: { pack: true },
+    const existingSubForSamePack = await prisma.subscription.findFirst({
+      where: { packId, userId, status: "active" },
+    });
+    if (existingSubForSamePack) {
+      return NextResponse.json({ error: "You already have this pack" }, { status: 400 });
+    }
+
+    const result = await prisma.$transaction(async (tx) => {
+      await tx.subscription.updateMany({
+        where: { userId, status: "active" },
+        data: { status: "superseded" },
+      });
+
+      const subscription = await tx.subscription.create({
+        data: {
+          userId,
+          packId: pack.id,
+          packType: pack.packType,
+          pagesAllowed: pack.pages,
+          pagesUsed: 0,
+          packPrice: pack.price,
+          status: "active",
+        },
+        include: { pack: true },
+      });
+
+      const payment = await tx.payment.create({
+        data: {
+          userId,
+          razorpayId: razorpayPaymentId,
+          razorpayOrderId,
+          amount: pack.price,
+          currency: "INR",
+          status: "COMPLETED",
+          description: `Page pack purchase: ${pack.name}`,
+        },
+      });
+
+      return { subscription, payment };
     });
 
-    const payment = await prisma.payment.create({
-      data: {
-        userId,
-        razorpayId: razorpayPaymentId,
-        razorpayOrderId,
-        amount: pack.price,
-        currency: "INR",
-        status: "COMPLETED",
-        description: `Page pack purchase: ${pack.name}`,
-      },
-    });
-
-    return NextResponse.json({ payment, subscription }, { status: 201 });
+    return NextResponse.json(result, { status: 201 });
   } catch (error: any) {
     return NextResponse.json({ error: error.message || "Payment verification failed" }, { status: 500 });
   }

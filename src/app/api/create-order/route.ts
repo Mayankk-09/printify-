@@ -34,9 +34,11 @@ export async function POST(request: Request) {
       currency: order.currency,
     }, { status: 200 });
   } catch (error: any) {
+    const razorpayDesc = error?.error?.description || error?.error?.message;
+    const msg = razorpayDesc || error?.message || "Failed to create order";
     return NextResponse.json(
-      { error: error?.message || "Failed to create order" },
-      { status: 500 },
+      { error: msg },
+      { status: error?.statusCode || 500 },
     );
   }
 }

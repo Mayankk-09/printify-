@@ -1,16 +1,23 @@
 "use client";
 export const dynamic = "force-dynamic";
 
+import { useState, useCallback } from "react";
 import FloatingPapers from "@/components/landing/FloatingPapers";
+import LandingNavbar from "@/components/landing/LandingNavbar";
 import HeroSection from "@/components/landing/HeroSection";
-import FeatureCards from "@/components/landing/FeatureCards";
 import HowItWorks from "@/components/landing/HowItWorks";
-import PrintProgress from "@/components/landing/PrintProgress";
+import WhyStudents from "@/components/landing/WhyStudents";
 import ProductCapabilities from "@/components/landing/Counters";
 import LoginPanel from "@/components/landing/LoginPanel";
 import LandingFooter from "@/components/landing/LandingFooter";
+import HelpSupportModal from "@/components/landing/HelpSupportModal";
 
 export default function LandingPage() {
+  const [helpOpen, setHelpOpen] = useState(false);
+
+  const openHelp = useCallback(() => setHelpOpen(true), []);
+  const closeHelp = useCallback(() => setHelpOpen(false), []);
+
   return (
     <main
       style={{
@@ -23,13 +30,14 @@ export default function LandingPage() {
       }}
     >
       <FloatingPapers />
+      <LandingNavbar onHelpClick={openHelp} />
       <HeroSection />
-      <FeatureCards />
       <HowItWorks />
-      <PrintProgress />
+      <WhyStudents />
       <ProductCapabilities />
       <LoginPanel />
       <LandingFooter />
+      <HelpSupportModal open={helpOpen} onClose={closeHelp} />
     </main>
   );
 }

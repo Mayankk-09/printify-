@@ -1,20 +1,39 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
+import { motion } from "framer-motion";
 import PrinterAnimation from "./PrinterAnimation";
-import S from "./landingStyles";
 
 export default function HeroSection() {
   const [loaded, setLoaded] = useState(false);
+  const [ctaHovered, setCtaHovered] = useState(false);
+  const [ctaPressed, setCtaPressed] = useState(false);
 
   useEffect(() => {
     const t = setTimeout(() => setLoaded(true), 100);
     return () => clearTimeout(t);
   }, []);
 
-  const scrollToPortal = () => {
+  const scrollToPortal = useCallback(() => {
     const el = document.getElementById("access-portal");
     if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, []);
+
+  const container = {
+    hidden: {},
+    visible: {
+      transition: { staggerChildren: 0.12, delayChildren: 0.15 },
+    },
+  };
+
+  const fadeUp = {
+    hidden: { opacity: 0, y: 28, filter: "blur(4px)" },
+    visible: {
+      opacity: 1,
+      y: 0,
+      filter: "blur(0px)",
+      transition: { duration: 0.8, ease: [0.16, 1, 0.3, 1] as const },
+    },
   };
 
   return (
@@ -25,11 +44,117 @@ export default function HeroSection() {
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
-        padding: "80px 24px 48px",
+        padding: "120px 24px 48px",
         zIndex: 1,
         overflow: "hidden",
       }}
     >
+      {/* Decorative elements layer — below 4% opacity */}
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          pointerEvents: "none",
+          overflow: "hidden",
+        }}
+        aria-hidden="true"
+      >
+        {/* Faint dotted grid */}
+        <svg
+          style={{
+            position: "absolute",
+            inset: 0,
+            width: "100%",
+            height: "100%",
+            opacity: 0.025,
+          }}
+        >
+          <defs>
+            <pattern id="hero-grid" x="0" y="0" width="48" height="48" patternUnits="userSpaceOnUse">
+              <circle cx="1" cy="1" r="0.6" fill="#000" />
+            </pattern>
+          </defs>
+          <rect width="100%" height="100%" fill="url(#hero-grid)" />
+        </svg>
+
+        {/* Floating paper outlines */}
+        {[
+          { x: "8%", y: "12%", w: 52, h: 68, rot: -6, dur: 22 },
+          { x: "85%", y: "18%", w: 44, h: 58, rot: 4, dur: 26 },
+          { x: "12%", y: "72%", w: 40, h: 52, rot: -3, dur: 24 },
+          { x: "88%", y: "65%", w: 48, h: 64, rot: 7, dur: 28 },
+          { x: "50%", y: "8%", w: 36, h: 48, rot: -2, dur: 20 },
+        ].map((p, i) => (
+          <div
+            key={i}
+            style={{
+              position: "absolute",
+              left: p.x,
+              top: p.y,
+              width: p.w,
+              height: p.h,
+              opacity: 0.03,
+              transform: `rotate(${p.rot}deg)`,
+              animation: `heroDecoFloat${i % 3} ${p.dur}s ease-in-out infinite`,
+            }}
+          >
+            <svg viewBox="0 0 50 66" fill="none" width="100%" height="100%">
+              <rect x="0.5" y="0.5" width="49" height="65" fill="none" stroke="#000" strokeWidth="0.6" />
+              {/* Corner fold */}
+              <path d="M38 0.5 L49.5 0.5 L49.5 12" fill="none" stroke="#000" strokeWidth="0.5" />
+              <line x1="38" y1="0.5" x2="49.5" y2="12" stroke="#000" strokeWidth="0.5" />
+              {/* Text lines */}
+              <line x1="8" y1="18" x2="36" y2="18" stroke="#000" strokeWidth="0.4" />
+              <line x1="8" y1="24" x2="32" y2="24" stroke="#000" strokeWidth="0.4" />
+              <line x1="8" y1="30" x2="34" y2="30" stroke="#000" strokeWidth="0.4" />
+              <line x1="8" y1="36" x2="28" y2="36" stroke="#000" strokeWidth="0.4" />
+            </svg>
+          </div>
+        ))}
+
+        {/* Tiny printer watermark */}
+        <svg
+          style={{
+            position: "absolute",
+            right: "10%",
+            top: "30%",
+            width: 120,
+            height: 90,
+            opacity: 0.02,
+          }}
+          viewBox="0 0 120 90"
+          fill="none"
+          stroke="#000"
+          strokeWidth="0.8"
+        >
+          <rect x="20" y="30" width="80" height="35" />
+          <rect x="30" y="22" width="60" height="12" />
+          <rect x="35" y="60" width="50" height="10" />
+          <line x1="38" y1="38" x2="82" y2="38" strokeWidth="0.4" />
+          <line x1="38" y1="44" x2="76" y2="44" strokeWidth="0.4" />
+        </svg>
+
+        {/* Paper stack outlines */}
+        <svg
+          style={{
+            position: "absolute",
+            left: "6%",
+            top: "40%",
+            width: 80,
+            height: 100,
+            opacity: 0.02,
+          }}
+          viewBox="0 0 60 78"
+          fill="none"
+          stroke="#000"
+          strokeWidth="0.5"
+        >
+          <rect x="8" y="8" width="44" height="58" fill="none" />
+          <rect x="4" y="4" width="44" height="58" fill="none" />
+          <rect x="0" y="0" width="44" height="58" fill="none" />
+        </svg>
+      </div>
+
       {/* Paper texture overlay */}
       <div
         style={{
@@ -44,26 +169,31 @@ export default function HeroSection() {
         aria-hidden="true"
       />
 
-      <div style={{ maxWidth: 720, width: "100%", textAlign: "center" }}>
-        {/* Logo */}
-        <div style={S.fadeInUp(loaded, 0)}>
+      <motion.div
+        variants={container}
+        initial="hidden"
+        animate={loaded ? "visible" : "hidden"}
+        style={{ maxWidth: 720, width: "100%", textAlign: "center" }}
+      >
+        {/* Logo — fades in small since navbar has it */}
+        <motion.div variants={fadeUp} style={{ marginBottom: 16 }}>
           <img
             src="/branding/logo-full.png"
             alt="Printify"
-            height={56}
+            height={44}
             style={{
               width: "auto",
               objectFit: "contain",
-              marginBottom: 16,
             }}
             onError={(e) => {
-              (e.target as HTMLImageElement).src = "/branding/logo-mark.png";
+              (e.target as HTMLImageElement).style.display = "none";
             }}
           />
-        </div>
+        </motion.div>
 
         {/* PRINTIFY */}
-        <h1
+        <motion.h1
+          variants={fadeUp}
           style={{
             fontFamily: "var(--font-serif)",
             fontSize: "clamp(3rem, 10vw, 5.5rem)",
@@ -73,14 +203,13 @@ export default function HeroSection() {
             color: "#000",
             textTransform: "uppercase",
             marginBottom: 24,
-            ...S.fadeInUp(loaded, 0.1),
           }}
         >
           PRINTIFY
-        </h1>
+        </motion.h1>
 
         {/* Tagline */}
-        <div style={{ marginBottom: 20, ...S.fadeInUp(loaded, 0.25) }}>
+        <motion.div variants={fadeUp} style={{ marginBottom: 20 }}>
           <p
             style={{
               fontFamily: "var(--font-serif)",
@@ -107,10 +236,11 @@ export default function HeroSection() {
           >
             Achieve More.
           </p>
-        </div>
+        </motion.div>
 
         {/* Description */}
-        <p
+        <motion.p
+          variants={fadeUp}
           style={{
             fontFamily: "var(--font-sans)",
             fontSize: "clamp(0.85rem, 1.5vw, 1rem)",
@@ -118,19 +248,30 @@ export default function HeroSection() {
             color: "#555",
             maxWidth: 520,
             margin: "0 auto 36px",
-            ...S.fadeInUp(loaded, 0.4),
           }}
         >
           Professional document printing for students. Upload documents,
           configure prints, choose pickup slots and collect your order with
           ease.
-        </p>
+        </motion.p>
 
-        {/* CTA Button — scrolls to Access Portal */}
-        <div style={S.fadeInUp(loaded, 0.55)}>
-          <button
+        {/* CTA Button — improved hover/click */}
+        <motion.div variants={fadeUp}>
+          <motion.button
             type="button"
             onClick={scrollToPortal}
+            onMouseEnter={() => setCtaHovered(true)}
+            onMouseLeave={() => { setCtaHovered(false); setCtaPressed(false); }}
+            onMouseDown={() => setCtaPressed(true)}
+            onMouseUp={() => setCtaPressed(false)}
+            animate={{
+              y: ctaPressed ? 0 : ctaHovered ? -3 : 0,
+              boxShadow: ctaHovered
+                ? "0 8px 30px rgba(0,0,0,0.18)"
+                : "0 0px 0px rgba(0,0,0,0)",
+              scale: ctaPressed ? 0.98 : 1,
+            }}
+            transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
             style={{
               display: "inline-flex",
               alignItems: "center",
@@ -148,28 +289,33 @@ export default function HeroSection() {
               cursor: "pointer",
               position: "relative",
               overflow: "hidden",
-              transition: "transform 0.2s ease, box-shadow 0.2s ease",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = "translateY(-2px)";
-              e.currentTarget.style.boxShadow = "0 4px 20px rgba(0,0,0,0.15)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = "translateY(0)";
-              e.currentTarget.style.boxShadow = "none";
             }}
             aria-label="Get started - scroll to access portal"
           >
+            {/* Shine sweep on hover */}
+            <motion.div
+              animate={{
+                x: ctaHovered ? "200%" : "-100%",
+              }}
+              transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+              style={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                width: "60%",
+                height: "100%",
+                background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.12), transparent)",
+                pointerEvents: "none",
+              }}
+            />
             GET STARTED
-          </button>
-        </div>
+          </motion.button>
+        </motion.div>
 
-        {/* Animated down-arrow indicator */}
-        <div
-          style={{
-            marginTop: 20,
-            ...S.fadeIn(loaded, 0.75),
-          }}
+        {/* Animated down-arrow */}
+        <motion.div
+          variants={fadeUp}
+          style={{ marginTop: 20 }}
           aria-hidden="true"
         >
           <svg
@@ -178,47 +324,37 @@ export default function HeroSection() {
             viewBox="0 0 20 28"
             fill="none"
             style={{
-              animation: "heroArrowBounce 2s ease-in-out infinite",
+              animation: "heroArrowBounce 2.5s ease-in-out infinite",
             }}
           >
-            <rect x="8" y="0" width="4" height="4" fill="#000" opacity="0.25" />
-            <path
-              d="M10 6 L10 22"
-              stroke="#000"
-              strokeWidth="1.2"
-              opacity="0.25"
-            />
-            <path
-              d="M5 18 L10 24 L15 18"
-              stroke="#000"
-              strokeWidth="1.2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              opacity="0.25"
-            />
+            <rect x="8" y="0" width="4" height="4" fill="#000" opacity="0.2" />
+            <path d="M10 6 L10 22" stroke="#000" strokeWidth="1.2" opacity="0.2" />
+            <path d="M5 18 L10 24 L15 18" stroke="#000" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" opacity="0.2" />
           </svg>
-        </div>
-      </div>
+        </motion.div>
+      </motion.div>
 
       {/* Printer Illustration */}
-      <div
-        style={{
-          marginTop: 40,
-          ...S.fadeInUp(loaded, 0.65),
-        }}
+      <motion.div
+        initial={{ opacity: 0, y: 32 }}
+        animate={loaded ? { opacity: 1, y: 0 } : {}}
+        transition={{ duration: 0.9, delay: 0.7, ease: [0.16, 1, 0.3, 1] }}
+        style={{ marginTop: 40 }}
       >
         <PrinterAnimation />
-      </div>
+      </motion.div>
 
       {/* Hero Stats */}
-      <div
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={loaded ? { opacity: 1 } : {}}
+        transition={{ duration: 0.8, delay: 0.9 }}
         style={{
           display: "flex",
           gap: 32,
           marginTop: 40,
           flexWrap: "wrap",
           justifyContent: "center",
-          ...S.fadeIn(loaded, 0.8),
         }}
       >
         {[
@@ -252,12 +388,27 @@ export default function HeroSection() {
             </span>
           </div>
         ))}
-      </div>
+      </motion.div>
 
       <style>{`
         @keyframes heroArrowBounce {
           0%, 100% { transform: translateY(0); opacity: 1; }
-          50% { transform: translateY(6px); opacity: 0.5; }
+          50% { transform: translateY(6px); opacity: 0.4; }
+        }
+        @keyframes heroDecoFloat0 {
+          0%, 100% { transform: rotate(-6deg) translate(0, 0); }
+          33% { transform: rotate(-4deg) translate(3px, -5px); }
+          66% { transform: rotate(-7deg) translate(-2px, 3px); }
+        }
+        @keyframes heroDecoFloat1 {
+          0%, 100% { transform: rotate(4deg) translate(0, 0); }
+          33% { transform: rotate(6deg) translate(-4px, 4px); }
+          66% { transform: rotate(2deg) translate(3px, -3px); }
+        }
+        @keyframes heroDecoFloat2 {
+          0%, 100% { transform: rotate(-3deg) translate(0, 0); }
+          33% { transform: rotate(-1deg) translate(2px, -6px); }
+          66% { transform: rotate(-5deg) translate(-3px, 2px); }
         }
       `}</style>
     </section>

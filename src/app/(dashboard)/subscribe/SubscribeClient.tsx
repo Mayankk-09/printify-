@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import toast from "react-hot-toast";
 
 const PACK_TYPE_LABELS: Record<string, string> = {
@@ -14,32 +14,105 @@ export default function SubscribeClient({ initialPacks, initialBalance }: { init
   const [selectedPack, setSelectedPack] = useState<any>(null);
   const [processing, setProcessing] = useState(false);
 
+  const activeSubPackIds = new Set(
+    (balance?.subscriptions ?? []).map((s: any) => s.packId)
+  );
+  const hasActiveSub = activeSubPackIds.size > 0;
+
   const [couponCode, setCouponCode] = useState("");
   const [couponLoading, setCouponLoading] = useState(false);
   const [couponResult, setCouponResult] = useState<any>(null);
   const [discountedTotal, setDiscountedTotal] = useState<number | null>(null);
+  const [razorpayLoaded, setRazorpayLoaded] = useState(false);
+
+  useEffect(() => {
+    if (!document.getElementById("razorpay-checkout-script")) {
+      const script = document.createElement("script");
+      script.id = "razorpay-checkout-script";
+      script.src = "https://checkout.razorpay.com/v1/checkout.js";
+      script.async = true;
+      script.onload = () => setRazorpayLoaded(true);
+      document.body.appendChild(script);
+    } else {
+      setRazorpayLoaded(true);
+    }
+  }, []);
 
   const handlePurchase = async () => {
     if (!selectedPack) return;
     setProcessing(true);
     try {
-      const res = await fetch("/api/subscriptions", {
+      const amountPaise = couponResult ? Math.round(couponResult.finalAmount * 100) : selectedPack.price;
+
+      if (amountPaise < 100) {
+        toast.error("Minimum payable amount is ₹1");
+        setProcessing(false);
+        return;
+      }
+
+      const orderRes = await fetch("/api/create-order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ packId: selectedPack.id }),
+        body: JSON.stringify({ amount: amountPaise, receipt: `sub_${selectedPack.slug}_${Date.now()}` }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Purchase failed");
-      toast.success(`${selectedPack.name} purchased!`);
-      setSelectedPack(null);
-      setCouponCode("");
-      setCouponResult(null);
-      setDiscountedTotal(null);
-      const updated = await fetch("/api/subscriptions/mine").then((r) => r.json());
-      setBalance(updated);
+      const orderData = await orderRes.json();
+      if (!orderRes.ok) throw new Error(orderData.error || "Failed to create payment order");
+
+      const options = {
+        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+        amount: orderData.amount,
+        currency: orderData.currency,
+        name: "PRINTIFY",
+        description: `Page Pack: ${selectedPack.name}`,
+        order_id: orderData.orderId,
+        handler: async (response: any) => {
+          try {
+            const verifyRes = await fetch("/api/payments", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                packId: selectedPack.id,
+                razorpayPaymentId: response.razorpay_payment_id,
+                razorpayOrderId: response.razorpay_order_id,
+                razorpaySignature: response.razorpay_signature,
+              }),
+            });
+            const verifyData = await verifyRes.json();
+            if (!verifyRes.ok) throw new Error(verifyData.error || "Payment verification failed");
+
+            toast.success(`${selectedPack.name} purchased!`);
+            setSelectedPack(null);
+            setCouponCode("");
+            setCouponResult(null);
+            setDiscountedTotal(null);
+            const updated = await fetch("/api/subscriptions/mine").then((r) => r.json());
+            setBalance(updated);
+          } catch (err: any) {
+            toast.error(err.message || "Payment verification failed");
+          } finally {
+            setProcessing(false);
+          }
+        },
+        prefill: {},
+        theme: {
+          color: "#000000",
+        },
+        modal: {
+          ondismiss: () => {
+            setProcessing(false);
+            toast.error("Payment cancelled");
+          },
+        },
+      };
+
+      const rzp = new (window as any).Razorpay(options);
+      rzp.on("payment.failed", (response: any) => {
+        toast.error(response.error?.description || "Payment failed");
+        setProcessing(false);
+      });
+      rzp.open();
     } catch (err: any) {
       toast.error(err.message || "Unable to purchase");
-    } finally {
       setProcessing(false);
     }
   };
@@ -121,7 +194,7 @@ export default function SubscribeClient({ initialPacks, initialBalance }: { init
                 type="button"
                 onClick={() => { setSelectedPack(pack); setCouponCode(""); setCouponResult(null); setDiscountedTotal(null); }}
               >
-                Buy Now
+                {activeSubPackIds.has(pack.id) ? "Active" : hasActiveSub ? "Upgrade" : "Buy Now"}
               </button>
             </article>
           );
@@ -133,7 +206,7 @@ export default function SubscribeClient({ initialPacks, initialBalance }: { init
           <div className="glass-card modal-card">
             <div className="flex-between" style={{ marginBottom: 16 }}>
               <div>
-                <span className="eyebrow">Confirm purchase</span>
+                <span className="eyebrow">{hasActiveSub && !activeSubPackIds.has(selectedPack.id) ? "Upgrade plan" : "Confirm purchase"}</span>
                 <h2 className="font-black" style={{ marginTop: 4, fontSize: "1.15rem" }}>
                   {selectedPack.name}
                 </h2>

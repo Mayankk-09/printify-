@@ -1,14 +1,14 @@
 "use client";
 
+import { motion } from "framer-motion";
 import { useInView } from "./useInView";
-import S from "./landingStyles";
 
 const capabilities = [
   {
     label: "PDF / DOC / DOCX / PPT / PPTX",
     icon: (
       <svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="#000" strokeWidth="1.2">
-        <rect x="4" y="2" width="14" height="18" rx="1" />
+        <rect x="4" y="2" width="14" height="18" rx="0" />
         <path d="M8 7h6M8 10h6M8 13h4" />
       </svg>
     ),
@@ -17,7 +17,7 @@ const capabilities = [
     label: "Secure Storage",
     icon: (
       <svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="#000" strokeWidth="1.2">
-        <rect x="5" y="10" width="12" height="9" rx="1" />
+        <rect x="5" y="10" width="12" height="9" rx="0" />
         <path d="M7 10V7a4 4 0 0 1 8 0v3" />
         <circle cx="11" cy="14.5" r="1" fill="#000" />
       </svg>
@@ -27,7 +27,7 @@ const capabilities = [
     label: "Flexible Pickup",
     icon: (
       <svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="#000" strokeWidth="1.2">
-        <rect x="3" y="4" width="16" height="14" rx="1" />
+        <rect x="3" y="4" width="16" height="14" rx="0" />
         <path d="M3 9h16M8 2v4M14 2v4" />
         <circle cx="11" cy="14" r="1.5" />
       </svg>
@@ -37,13 +37,29 @@ const capabilities = [
     label: "Premium Printing",
     icon: (
       <svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="#000" strokeWidth="1.2">
-        <rect x="3" y="8" width="16" height="8" rx="1" />
+        <rect x="3" y="8" width="16" height="8" rx="0" />
         <rect x="6" y="4" width="10" height="6" />
         <rect x="6" y="14" width="10" height="4" />
       </svg>
     ),
   },
 ];
+
+const containerVariants = {
+  hidden: {},
+  visible: {
+    transition: { staggerChildren: 0.06 },
+  },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 12 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] as const },
+  },
+};
 
 export default function ProductCapabilities() {
   const { ref, inView } = useInView(0.15);
@@ -58,10 +74,12 @@ export default function ProductCapabilities() {
         padding: "40px 24px",
         borderTop: "1px solid #e0e0e0",
         borderBottom: "1px solid #e0e0e0",
-        ...S.fadeInUp(inView, 0),
       }}
     >
-      <div
+      <motion.div
+        variants={containerVariants}
+        initial="hidden"
+        animate={inView ? "visible" : "hidden"}
         style={{
           display: "flex",
           justifyContent: "center",
@@ -70,8 +88,9 @@ export default function ProductCapabilities() {
         }}
       >
         {capabilities.map((c) => (
-          <div
+          <motion.div
             key={c.label}
+            variants={itemVariants}
             style={{
               display: "flex",
               alignItems: "center",
@@ -95,9 +114,9 @@ export default function ProductCapabilities() {
             >
               {c.label}
             </span>
-          </div>
+          </motion.div>
         ))}
-      </div>
+      </motion.div>
     </section>
   );
 }

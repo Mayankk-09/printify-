@@ -73,6 +73,11 @@ export async function POST(request: Request) {
   }
 
   await prisma.$transaction(async (tx) => {
+    await tx.subscription.updateMany({
+      where: { userId: user.id, status: "active" },
+      data: { status: "superseded" },
+    });
+
     const subscription = await tx.subscription.create({
       data: {
         userId: user.id,

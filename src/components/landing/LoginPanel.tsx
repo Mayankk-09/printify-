@@ -1,9 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useInView } from "./useInView";
-import S from "./landingStyles";
+import { motion, AnimatePresence } from "framer-motion";
 
 const policies = [
   {
@@ -38,33 +37,70 @@ const trustBadges = [
 export default function LoginPanel() {
   const [agreed, setAgreed] = useState(false);
   const [openSection, setOpenSection] = useState<string | null>(null);
-  const { ref, inView } = useInView(0.06);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    const t = setTimeout(() => setLoaded(true), 100);
+    return () => clearTimeout(t);
+  }, []);
+
+  const badgeContainer = {
+    hidden: {},
+    visible: {
+      transition: { staggerChildren: 0.06 },
+    },
+  };
+
+  const badgeItem = {
+    hidden: { opacity: 0, scale: 0.9 },
+    visible: {
+      opacity: 1,
+      scale: 1,
+      transition: { duration: 0.4, ease: [0.16, 1, 0.3, 1] as const },
+    },
+  };
 
   return (
     <section
       id="access-portal"
-      ref={ref}
       style={{
         width: "100%",
         maxWidth: 760,
         margin: "0 auto",
         padding: "32px 24px 48px",
-        scrollMarginTop: 24,
+        scrollMarginTop: 72,
       }}
     >
       {/* Login panel card */}
-      <div
+      <motion.div
+        initial={{ opacity: 0, y: 24 }}
+        animate={loaded ? { opacity: 1, y: 0 } : {}}
+        transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
         style={{
           border: "1px solid #000",
           background: "#fff",
           padding: "24px 28px",
-          ...S.fadeInUp(inView, 0),
         }}
       >
-        <p style={{ ...S.eyebrow(), marginBottom: 16 }}>ACCESS PORTAL</p>
+        <p
+          style={{
+            fontFamily: "var(--font-mono)",
+            fontSize: "0.62rem",
+            fontWeight: 700,
+            textTransform: "uppercase",
+            letterSpacing: "0.14em",
+            color: "#888",
+            marginBottom: 16,
+          }}
+        >
+          ACCESS PORTAL
+        </p>
 
         {/* Trust badges */}
-        <div
+        <motion.div
+          variants={badgeContainer}
+          initial="hidden"
+          animate={loaded ? "visible" : "hidden"}
           style={{
             display: "flex",
             gap: 8,
@@ -73,8 +109,9 @@ export default function LoginPanel() {
           }}
         >
           {trustBadges.map((b) => (
-            <div
+            <motion.div
               key={b.label}
+              variants={badgeItem}
               style={{
                 display: "flex",
                 alignItems: "center",
@@ -91,9 +128,39 @@ export default function LoginPanel() {
             >
               <span style={{ fontSize: "0.7rem" }}>{b.icon}</span>
               {b.label}
-            </div>
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
+
+        {/* Secure Login label */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={loaded ? { opacity: 1 } : {}}
+          transition={{ duration: 0.6, delay: 0.3 }}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            marginBottom: 10,
+          }}
+        >
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="11" width="18" height="11" rx="0" />
+            <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+          </svg>
+          <span
+            style={{
+              fontFamily: "var(--font-mono)",
+              fontSize: "0.56rem",
+              fontWeight: 700,
+              textTransform: "uppercase",
+              letterSpacing: "0.08em",
+              color: "#888",
+            }}
+          >
+            Secure Login
+          </span>
+        </motion.div>
 
         {/* Checkbox */}
         <label
@@ -134,70 +201,108 @@ export default function LoginPanel() {
           </span>
         </label>
 
-        {/* Login button / disabled state */}
-        {agreed ? (
-          <Link
-            href="/login"
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              width: "100%",
-              minHeight: 48,
-              padding: "12px 20px",
-              background: "#000",
-              color: "#F9F9F6",
-              border: "1px solid #000",
-              fontFamily: "var(--font-mono)",
-              fontSize: "0.75rem",
-              fontWeight: 700,
-              textTransform: "uppercase",
-              letterSpacing: "0.06em",
-              textDecoration: "none",
-              transition: "transform 0.2s ease, box-shadow 0.2s ease",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = "translateY(-2px)";
-              e.currentTarget.style.boxShadow = "0 4px 16px rgba(0,0,0,0.12)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = "translateY(0)";
-              e.currentTarget.style.boxShadow = "none";
-            }}
-          >
-            Continue to Login →
-          </Link>
-        ) : (
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              width: "100%",
-              minHeight: 48,
-              padding: "12px 20px",
-              background: "transparent",
-              border: "1px dashed #ccc",
-              fontFamily: "var(--font-mono)",
-              fontSize: "0.65rem",
-              fontWeight: 700,
-              textTransform: "uppercase",
-              letterSpacing: "0.06em",
-              color: "#aaa",
-              cursor: "not-allowed",
-            }}
-          >
-            Check the box above to continue
-          </div>
-        )}
-      </div>
+        {/* "Press to Continue" blinking text when unchecked */}
+        <AnimatePresence mode="wait">
+          {!agreed ? (
+            <motion.div
+              key="disabled"
+              initial={{ opacity: 0, scale: 0.98 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.97 }}
+              transition={{ duration: 0.3 }}
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: 8,
+              }}
+            >
+              <div
+                style={{
+                  width: "100%",
+                  minHeight: 48,
+                  padding: "12px 20px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  background: "transparent",
+                  border: "1px dashed #ccc",
+                  fontFamily: "var(--font-mono)",
+                  fontSize: "0.65rem",
+                  fontWeight: 700,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.06em",
+                  color: "#aaa",
+                  cursor: "not-allowed",
+                }}
+              >
+                Check the box above to continue
+              </div>
+              <span
+                style={{
+                  fontFamily: "var(--font-mono)",
+                  fontSize: "0.5rem",
+                  fontWeight: 700,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.1em",
+                  color: "#ccc",
+                  animation: "pressBlink 2s ease-in-out infinite",
+                }}
+              >
+                Press to Continue
+              </span>
+            </motion.div>
+          ) : (
+            <motion.div
+              key="enabled"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+            >
+              <Link
+                href="/login"
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  width: "100%",
+                  minHeight: 48,
+                  padding: "12px 20px",
+                  background: "#000",
+                  color: "#F9F9F6",
+                  border: "1px solid #000",
+                  fontFamily: "var(--font-mono)",
+                  fontSize: "0.75rem",
+                  fontWeight: 700,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.06em",
+                  textDecoration: "none",
+                  transition: "transform 0.2s ease, box-shadow 0.2s ease",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = "translateY(-2px)";
+                  e.currentTarget.style.boxShadow = "0 4px 16px rgba(0,0,0,0.12)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = "translateY(0)";
+                  e.currentTarget.style.boxShadow = "none";
+                }}
+              >
+                Continue to Login →
+              </Link>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </motion.div>
 
-      {/* Accordion compliance — tighter spacing */}
-      <div
+      {/* Accordion compliance */}
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={loaded ? { opacity: 1, y: 0 } : {}}
+        transition={{ duration: 0.6, delay: 0.2 }}
         style={{
           borderTop: "1px solid #000",
           marginTop: 0,
-          ...S.fadeInUp(inView, 0.1),
         }}
       >
         {policies.map((p, i) => {
@@ -280,7 +385,14 @@ export default function LoginPanel() {
             </div>
           );
         })}
-      </div>
+      </motion.div>
+
+      <style>{`
+        @keyframes pressBlink {
+          0%, 100% { opacity: 0.6; }
+          50% { opacity: 0.25; }
+        }
+      `}</style>
     </section>
   );
 }
