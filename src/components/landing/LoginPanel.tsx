@@ -8,7 +8,7 @@ const policies = [
   {
     id: "privacy",
     title: "PRIVACY POLICY",
-    body: "PRINTIFY CORE operates a strict 30-Minute Post-Pickup Secure Server Data Shredding Protocol. All uploaded files are permanently and irreversibly deleted from our servers 30 minutes after you collect your prints. No document content is retained, cached, or shared with any third party. Payment processing is handled exclusively through Razorpay, a PCI-DSS Level 1 compliant gateway. We never store or have access to your UPI PIN, card CVV, or full account numbers. Support contact: printify-quick@gmail.com.",
+    body: "PRINTIFY operates a strict 30-Minute Post-Pickup Secure Server Data Shredding Protocol. All uploaded files are permanently and irreversibly deleted from our servers 30 minutes after you collect your prints. No document content is retained, cached, or shared with any third party. Payment processing is handled exclusively through Razorpay, a PCI-DSS Level 1 compliant gateway. We never store or have access to your UPI PIN, card CVV, or full account numbers. Support contact: printify-quick@gmail.com.",
   },
   {
     id: "refund",
