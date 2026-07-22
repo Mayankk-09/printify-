@@ -318,7 +318,7 @@ export default function HelpSupportModal({ open, onClose }: HelpSupportModalProp
               textAlign: "center",
             }}
           >
-            Built with ❤️ for students.
+            Built with love for students.
           </p>
         </div>
       </div>
