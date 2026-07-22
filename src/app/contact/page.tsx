@@ -191,7 +191,7 @@ export default function ContactPage() {
             >
               printify-quick@gmail.com
             </a>
-            . We aim to respond within 12 hours during library operating hours.
+            . We aim to respond within 12 hours during operating hours on working days.
           </p>
         </section>
       </article>
