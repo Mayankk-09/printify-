@@ -300,10 +300,11 @@ export default function SubscribeClient({ initialPacks, initialBalance }: { init
         .pp-header p { margin-top: 4px; }
         .pp-balance { min-width: 200px; display: flex; flex-direction: column; gap: 4px; justify-content: center; align-items: center; border: 1px solid var(--border-primary); background: var(--bg-card); padding: 20px; }
         .pp-balance-num { font-size: 2.2rem; line-height: 1; font-weight: 800; font-family: var(--font-serif-alt); letter-spacing: -0.03em; }
-        .pp-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+        .pp-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; align-items: stretch; }
         .pp-card { position: relative; display: flex; flex-direction: column; gap: 10px; overflow: hidden; padding: 20px; border: 1px solid var(--border-primary); background: var(--bg-card); }
         .pp-card:active { transform: scale(0.99); }
         .pp-card.best-value { border-width: 2px; }
+        .pp-card .btn { margin-top: auto; }
         .pp-badge { position: absolute; top: 12px; right: 12px; background: var(--bg-black); color: #fff; padding: 4px 10px; font-size: 0.65rem; font-weight: 800; font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.06em; }
         .pp-name { font-size: 1.25rem; font-weight: 800; padding-right: 80px; font-family: var(--font-serif); letter-spacing: -0.03em; }
         .pp-desc { font-size: 0.85rem; }

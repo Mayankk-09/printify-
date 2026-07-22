@@ -3,7 +3,7 @@
 import { useSession } from "@/lib/use-session";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 
 const navItems = [
   { href: "/dashboard", label: "Home", icon: "◷" },
@@ -15,7 +15,7 @@ const navItems = [
 ];
 
 export default function Sidebar() {
-  const { isSignedIn, user, signOut } = useSession();
+  const { isSignedIn, user, signOut, refresh } = useSession();
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -34,6 +34,13 @@ export default function Sidebar() {
     }
     return () => { document.body.style.overflow = ""; };
   }, [open]);
+
+  const handleProfileUpdate = useCallback(() => { refresh(); }, [refresh]);
+
+  useEffect(() => {
+    window.addEventListener("profile-updated", handleProfileUpdate);
+    return () => window.removeEventListener("profile-updated", handleProfileUpdate);
+  }, [handleProfileUpdate]);
 
   if (!mounted) return null;
 

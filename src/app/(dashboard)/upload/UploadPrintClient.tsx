@@ -385,11 +385,6 @@ const isTrialEligible = trialActive && color === "bw" && printablePages <= trial
                   <button type="button" className={color === "bw" ? "active" : ""} onClick={() => setColor("bw")}>B&W</button>
                   <button type="button" className={color === "color" ? "active" : ""} onClick={() => setColor("color")}>Color</button>
                 </div>
-                {colorBlocked && (
-                  <span style={{ color: "#fbbf24", fontSize: "0.75rem", marginTop: 4, display: "block" }}>
-                    Color printing will be charged separately (not covered by your B&W pack).
-                  </span>
-                )}
               </div>
               <div className="form-group">
                 <label className="form-label">Sides</label>

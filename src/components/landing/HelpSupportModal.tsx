@@ -59,16 +59,16 @@ function CopyButton({ text }: { text: string }) {
 
 const developers = [
   {
-    name: "Dhairya Gupta",
-    github: "stilldhairya-ui",
-    email: "still.dhairya@gmail.com",
-    githubUrl: "https://github.com/stilldhairya-ui",
-  },
-  {
     name: "Mayank Khanna",
     github: "Mayankk-09",
     email: "mayankkhanna789@gmail.com",
     githubUrl: "https://github.com/Mayankk-09",
+  },
+  {
+    name: "Dhairya Gupta",
+    github: "stilldhairya-ui",
+    email: "still.dhairya@gmail.com",
+    githubUrl: "https://github.com/stilldhairya-ui",
   },
 ];
 
@@ -136,8 +136,8 @@ export default function HelpSupportModal({ open, onClose }: HelpSupportModalProp
         </div>
 
         <div style={{ padding: "20px 24px" }}>
-          {/* Customer Support */}
-          <div style={{ marginBottom: 20 }}>
+          {/* Developed By */}
+          <div style={{ marginBottom: 14 }}>
             <p
               style={{
                 fontFamily: "var(--font-mono)",
@@ -149,55 +149,23 @@ export default function HelpSupportModal({ open, onClose }: HelpSupportModalProp
                 marginBottom: 10,
               }}
             >
-              Customer Support
+              Developed by
             </p>
-            <div
+            <p
               style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                gap: 8,
+                fontFamily: "var(--font-serif)",
+                fontSize: "1rem",
+                fontWeight: 700,
+                color: "#000",
+                lineHeight: 1.3,
               }}
             >
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="2" y="4" width="20" height="16" rx="0" />
-                  <path d="M22 4L12 13 2 4" />
-                </svg>
-                <a
-                  href="mailto:printifyquick@gmail.com"
-                  style={{
-                    fontFamily: "var(--font-sans)",
-                    fontSize: "0.82rem",
-                    color: "#000",
-                    textDecoration: "underline",
-                    textUnderlineOffset: 3,
-                  }}
-                >
-                  printifyquick@gmail.com
-                </a>
-              </div>
-              <CopyButton text="printifyquick@gmail.com" />
-            </div>
+              Mayank Khanna<br />&amp; Dhairya Gupta
+            </p>
           </div>
 
           {/* Divider */}
           <div style={{ borderTop: "1px solid #e0e0e0", margin: "4px 0 20px" }} />
-
-          {/* Developed By */}
-          <p
-            style={{
-              fontFamily: "var(--font-mono)",
-              fontSize: "0.58rem",
-              fontWeight: 700,
-              textTransform: "uppercase",
-              letterSpacing: "0.1em",
-              color: "#888",
-              marginBottom: 14,
-            }}
-          >
-            Developed By
-          </p>
 
           {developers.map((dev, idx) => (
             <div key={dev.github} style={{ marginBottom: idx < developers.length - 1 ? 18 : 0 }}>
@@ -281,6 +249,54 @@ export default function HelpSupportModal({ open, onClose }: HelpSupportModalProp
               )}
             </div>
           ))}
+
+          {/* Divider */}
+          <div style={{ borderTop: "1px solid #e0e0e0", margin: "4px 0 20px" }} />
+
+          {/* Support */}
+          <div>
+            <p
+              style={{
+                fontFamily: "var(--font-mono)",
+                fontSize: "0.58rem",
+                fontWeight: 700,
+                textTransform: "uppercase",
+                letterSpacing: "0.1em",
+                color: "#888",
+                marginBottom: 10,
+              }}
+            >
+              Support
+            </p>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 8,
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="2" y="4" width="20" height="16" rx="0" />
+                  <path d="M22 4L12 13 2 4" />
+                </svg>
+                <a
+                  href="mailto:printifyquick@gmail.com"
+                  style={{
+                    fontFamily: "var(--font-sans)",
+                    fontSize: "0.82rem",
+                    color: "#000",
+                    textDecoration: "underline",
+                    textUnderlineOffset: 3,
+                  }}
+                >
+                  printifyquick@gmail.com
+                </a>
+              </div>
+              <CopyButton text="printifyquick@gmail.com" />
+            </div>
+          </div>
         </div>
 
         {/* Footer */}

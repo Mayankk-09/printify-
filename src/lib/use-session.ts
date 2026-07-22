@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 
 type User = {
@@ -30,8 +30,8 @@ export function useSession() {
   });
   const router = useRouter();
 
-  useEffect(() => {
-    fetch("/api/auth/me")
+  const fetchUser = useCallback(() => {
+    return fetch("/api/auth/me")
       .then(async (res) => {
         if (res.ok) {
           const user = await res.json();
@@ -45,6 +45,10 @@ export function useSession() {
       });
   }, []);
 
+  useEffect(() => {
+    fetchUser();
+  }, [fetchUser]);
+
   const signOut = async (opts?: { redirectUrl?: string }) => {
     try {
       await fetch("/api/auth/sign-out", { method: "POST" });
@@ -55,5 +59,5 @@ export function useSession() {
     router.push(opts?.redirectUrl || "/login");
   };
 
-  return { ...state, signOut };
+  return { ...state, signOut, refresh: fetchUser };
 }
