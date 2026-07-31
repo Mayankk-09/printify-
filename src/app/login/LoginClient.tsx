@@ -403,7 +403,37 @@ export default function LoginClient() {
                   paddingTop: "24px",
                 }}
               >
-                {SOCIAL_STRATEGIES.map((s) => (
+                {SOCIAL_STRATEGIES.map((s) =>
+                  s.strategy === "google" ? (
+                    <button
+                      key={s.strategy}
+                      type="button"
+                      disabled={true}
+                      style={{
+                        width: "100%",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: "10px",
+                        border: "1px dashed #000",
+                        background: "transparent",
+                        color: "#000",
+                        fontFamily:
+                          "'Space Mono', 'Courier New', monospace",
+                        fontSize: "0.6rem",
+                        fontWeight: 700,
+                        letterSpacing: "0.08em",
+                        padding: "14px 16px",
+                        cursor: "not-allowed",
+                        opacity: 0.55,
+                        transition:
+                          "background 0.12s, color 0.12s",
+                      }}
+                    >
+                      {s.icon}
+                      GOOGLE SIGN-IN // COMING SOON
+                    </button>
+                  ) : (
                   <button
                     key={s.strategy}
                     onClick={() => handleOAuth(s.strategy)}
@@ -460,7 +490,8 @@ export default function LoginClient() {
                     {s.icon}
                     {s.label}
                   </button>
-                ))}
+                  )
+                )}
               </div>
             </div>
           )}

@@ -383,7 +383,8 @@ const isTrialEligible = trialActive && color === "bw" && printablePages <= trial
                 <label className="form-label">Print mode</label>
                 <div className="segmented-control">
                   <button type="button" className={color === "bw" ? "active" : ""} onClick={() => setColor("bw")}>B&W</button>
-                  <button type="button" className={color === "color" ? "active" : ""} onClick={() => setColor("color")}>Color</button>
+                  <button type="button" className={color === "color" ? "active" : ""} onClick={() => setColor("color")} disabled>Color</button>
+                  <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.62rem", color: "#888", display: "block", marginTop: 6 }}>[ NOTICE // COLOR PRINTING TEMPORARILY OFFLINE ]</span>
                 </div>
               </div>
               <div className="form-group">
