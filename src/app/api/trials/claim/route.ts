@@ -14,18 +14,18 @@ export async function POST() {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    if (user.hasClaimedTrial) {
+    if (user.freeTrialClaimed) {
       return NextResponse.json({ error: "Trial already claimed" }, { status: 400 });
     }
 
     await prisma.user.update({
       where: { id: session.user.id },
-      data: { hasClaimedTrial: true, claimedTrialAt: new Date() },
+      data: { freeTrialClaimed: true, freeTrialClaimedAt: new Date() },
     });
 
     return NextResponse.json({
       message: "Free trial claimed successfully!",
-      hasClaimedTrial: true,
+      freeTrialClaimed: true,
     });
   } catch (error: any) {
     return NextResponse.json({ error: error.message || "Failed to claim trial" }, { status: 500 });

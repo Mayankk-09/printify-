@@ -57,12 +57,11 @@ model User {
   otpCode         String?
   otpExpires      DateTime?
   otpName         String?
-  hasUsedTrial    Boolean        @default(false)
-  hasClaimedTrial Boolean        @default(false)
-  hasOrderedBefore Boolean       @default(false)
-  claimedTrialAt  DateTime?
-  trialOrderId    String?
-  trialUsedAt     DateTime?
+  freeTrialClaimed   Boolean   @default(false)
+  freeTrialClaimedAt DateTime?
+  freeTrialUsed      Boolean   @default(false)
+  freeTrialUsedAt    DateTime?
+  hasOrderedBefore   Boolean   @default(false)
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
 

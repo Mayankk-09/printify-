@@ -40,7 +40,7 @@ export default async function DashboardPage() {
   const totalAllowed = subscriptions.reduce((s, sub) => s + sub.pagesAllowed, 0);
   const totalUsed = subscriptions.reduce((s, sub) => s + sub.pagesUsed, 0);
   const remainingPages = Math.max(0, totalAllowed - totalUsed);
-  const hasTrial = user.hasClaimedTrial && !user.hasUsedTrial;
+  const hasTrial = user.freeTrialClaimed && !user.freeTrialUsed;
   const activeOrder = activeOrders[0] || null;
 
   return (

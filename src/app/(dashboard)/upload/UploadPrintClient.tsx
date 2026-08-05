@@ -43,6 +43,7 @@ export default function UploadPrintClient({
   const [userData, setUserData] = useState<any>(null);
   const [selectedAddonIds, setSelectedAddonIds] = useState<string[]>([]);
   const [paymentModal, setPaymentModal] = useState<{ show: boolean; amount: number; breakdown: any } | null>(null);
+  const [trialLimitModal, setTrialLimitModal] = useState(false);
   const [upsellDismissed, setUpsellDismissed] = useState(false);
 
   const [addons, setAddons] = useState<any[]>([]);
@@ -85,8 +86,8 @@ export default function UploadPrintClient({
   const hasPack = totalAllowed > 0;
   const firstSub = subscriptions[0];
   const packType = firstSub?.pack?.packType || null;
-  const hasClaimedTrial = userData?.hasClaimedTrial ?? false;
-  const hasUsedTrial = userData?.hasUsedTrial ?? false;
+  const hasClaimedTrial = userData?.freeTrialClaimed ?? false;
+  const hasUsedTrial = userData?.freeTrialUsed ?? false;
   const trialActive = hasClaimedTrial && !hasUsedTrial;
 
   const validate = (f: File) => {
@@ -162,7 +163,8 @@ export default function UploadPrintClient({
   const activeAddons = addons.filter((a) => selectedAddonIds.includes(a.id));
   const addonPrices = activeAddons.map((a) => ({ price: a.price }));
   const trialMaxPagesSetting = 5;
-const isTrialEligible = trialActive && color === "bw" && printablePages <= trialMaxPagesSetting && addonPrices.length === 0;
+  const isTrialEligible = trialActive && !hasPack && color === "bw" && printablePages <= trialMaxPagesSetting && addonPrices.length === 0;
+  const trialOverLimit = trialActive && !hasPack && color === "bw" && printablePages > trialMaxPagesSetting;
 
   const costResult = calculateOrderCost({
     pages: pagesPerDoc,
@@ -186,6 +188,11 @@ const isTrialEligible = trialActive && color === "bw" && printablePages <= trial
 
   const handleSubmit = async () => {
     if (!fileDetails) { toast.error("Upload a document first."); return; }
+
+    if (trialOverLimit) {
+      setTrialLimitModal(true);
+      return;
+    }
 
     const orderPayload: Record<string, any> = {
       fileName: fileDetails.fileName,
@@ -538,7 +545,7 @@ const isTrialEligible = trialActive && color === "bw" && printablePages <= trial
               ) : !fileDetails ? (
                 "Upload a document"
               ) : trialUsed ? (
-                "PLACE ORDER via PAGE CREDITS"
+                "PLACE FREE TRIAL ORDER"
               ) : needsPayment ? (
                 <span className="pay-btn-text">PROCEED TO PAY VIA UPI // SECURE via RAZORPAY</span>
               ) : (
@@ -584,6 +591,43 @@ const isTrialEligible = trialActive && color === "bw" && printablePages <= trial
               </button>
               <button className="btn btn-primary" type="button" disabled={submitting} onClick={handlePayNow} style={{ flex: 1 }}>
                 {submitting ? <div className="spinner" /> : `Pay ${formatPrice(paymentModal.amount)}`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {trialLimitModal && (
+        <div className="modal-backdrop">
+          <div className="glass-card modal-card" style={{ maxWidth: 440 }}>
+            <div className="flex-between" style={{ marginBottom: 16 }}>
+              <h2 className="font-black">Free Trial Limit</h2>
+              <button className="btn btn-ghost" onClick={() => setTrialLimitModal(false)} type="button">✕</button>
+            </div>
+            <p className="text-secondary text-sm" style={{ lineHeight: 1.6, marginBottom: 16 }}>
+              The Free Trial supports a maximum of {trialMaxPagesSetting} Black &amp; White pages per order.
+            </p>
+            <div className="pay-actions" style={{ flexDirection: "column", gap: 8 }}>
+              <button
+                className="btn btn-primary w-100"
+                type="button"
+                onClick={() => { setTrialLimitModal(false); router.push("/subscribe"); }}
+              >
+                Buy a Pack
+              </button>
+              <button
+                className="btn btn-primary w-100"
+                type="button"
+                onClick={() => { setTrialLimitModal(false); setPaymentModal({ show: true, amount: breakdown.grandTotal, breakdown }); }}
+              >
+                Pay Per Page
+              </button>
+              <button
+                className="btn btn-secondary w-100"
+                type="button"
+                onClick={() => setTrialLimitModal(false)}
+              >
+                Cancel
               </button>
             </div>
           </div>

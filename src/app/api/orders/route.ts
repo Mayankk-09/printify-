@@ -118,7 +118,10 @@ export async function POST(request: Request) {
       price: a.price,
     }));
 
-    const isTrialEligible = user.hasClaimedTrial && !user.hasUsedTrial;
+    const isTrialEligible =
+      activeSubs.length === 0 &&
+      user.freeTrialClaimed &&
+      !user.freeTrialUsed;
 
     const costResult = calculateOrderCost({
       pages,
@@ -145,6 +148,29 @@ export async function POST(request: Request) {
         coveredByPack,
         message: "Trial eligible. Submit to use free trial.",
       });
+    }
+
+    if (isTrialEligible && printMode === "BW" && totalPrintablePages > trialMaxPages && !paymentConfirmed) {
+      return NextResponse.json({
+        requiresPayment: true,
+        amount: breakdown.grandTotal,
+        breakdown,
+        chargeablePages,
+        coveredByPack,
+        totalPrintablePages,
+        pagePrice,
+        trialOverLimit: true,
+        trialMaxPages,
+        message: `The Free Trial supports a maximum of ${trialMaxPages} Black & White pages per order.`,
+      });
+    }
+
+    if (isTrialUsed && (printMode !== "BW" || totalPrintablePages > trialMaxPages || addonPrices.length > 0 || activeSubs.length > 0)) {
+      return NextResponse.json({ error: "Free trial order is not valid for this order" }, { status: 400 });
+    }
+
+    if (requiresPayment && paymentConfirmed && !razorpayPaymentId) {
+      return NextResponse.json({ error: "Payment confirmation required to complete order" }, { status: 400 });
     }
 
     if (requiresPayment && !paymentConfirmed) {
@@ -221,7 +247,7 @@ export async function POST(request: Request) {
     if (isTrialUsed) {
       await prisma.user.update({
         where: { id: userId },
-        data: { hasUsedTrial: true, trialUsedAt: new Date() },
+        data: { freeTrialUsed: true, freeTrialUsedAt: new Date() },
       });
     }
 

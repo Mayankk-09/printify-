@@ -11,7 +11,7 @@ export default async function SubscribePage() {
   if (!session?.user) redirect("/login");
   if (session.user.role !== "student") redirect("/admin/dashboard");
 
-  const [packs, subscriptions] = await Promise.all([
+  const [packs, subscriptions, user] = await Promise.all([
     prisma.pack.findMany({
       where: { active: true },
       orderBy: { displayOrder: "asc" },
@@ -20,6 +20,15 @@ export default async function SubscribePage() {
       where: { userId: session.user.id, status: "active" },
       include: { pack: true },
       orderBy: { createdAt: "asc" },
+    }),
+    prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: {
+        freeTrialClaimed: true,
+        freeTrialClaimedAt: true,
+        freeTrialUsed: true,
+        freeTrialUsedAt: true,
+      },
     }),
   ]);
 
@@ -35,6 +44,12 @@ export default async function SubscribePage() {
         totalAllowed,
         totalUsed,
         remainingPages,
+      }}
+      initialFreeTrial={{
+        freeTrialClaimed: user?.freeTrialClaimed ?? false,
+        freeTrialClaimedAt: user?.freeTrialClaimedAt ?? null,
+        freeTrialUsed: user?.freeTrialUsed ?? false,
+        freeTrialUsedAt: user?.freeTrialUsedAt ?? null,
       }}
     />
   );

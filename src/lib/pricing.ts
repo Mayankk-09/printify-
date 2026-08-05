@@ -38,7 +38,12 @@ export function calculateOrderCost(params: {
   const documentCost = printablePages * pagePrice;
   
   let isTrialUsed = false;
-  if (params.isTrialEligible && params.printMode === "BW" && printablePages <= params.trialMaxPages) {
+  if (
+    params.isTrialEligible &&
+    params.printMode === "BW" &&
+    params.addonPrices.length === 0 &&
+    printablePages <= params.trialMaxPages
+  ) {
     isTrialUsed = true;
     return {
       breakdown: {

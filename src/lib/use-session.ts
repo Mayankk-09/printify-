@@ -9,11 +9,10 @@ type User = {
   email: string;
   role: string;
   phone: string | null;
-  hasUsedTrial: boolean;
-  hasClaimedTrial: boolean;
-  claimedTrialAt: string | null;
-  trialOrderId: string | null;
-  trialUsedAt: string | null;
+  freeTrialClaimed: boolean;
+  freeTrialClaimedAt: string | null;
+  freeTrialUsed: boolean;
+  freeTrialUsedAt: string | null;
 };
 
 type SessionState = {

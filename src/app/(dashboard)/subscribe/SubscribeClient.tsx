@@ -8,11 +8,16 @@ const PACK_TYPE_LABELS: Record<string, string> = {
   BW_AND_COLOR: "B&W & Color",
 };
 
-export default function SubscribeClient({ initialPacks, initialBalance }: { initialPacks: any[]; initialBalance: any }) {
+export default function SubscribeClient({ initialPacks, initialBalance, initialFreeTrial }: { initialPacks: any[]; initialBalance: any; initialFreeTrial: any }) {
   const [packs] = useState(initialPacks);
   const [balance, setBalance] = useState<any>(initialBalance);
+  const [freeTrial, setFreeTrial] = useState<any>(initialFreeTrial);
   const [selectedPack, setSelectedPack] = useState<any>(null);
   const [processing, setProcessing] = useState(false);
+  const [claimingTrial, setClaimingTrial] = useState(false);
+
+  const trialAvailable = !freeTrial?.freeTrialClaimed;
+  const trialUsed = freeTrial?.freeTrialUsed;
 
   const activeSubPackIds = new Set(
     (balance?.subscriptions ?? []).map((s: any) => s.packId)
@@ -142,6 +147,29 @@ export default function SubscribeClient({ initialPacks, initialBalance }: { init
     }
   };
 
+  const handleClaimTrial = async () => {
+    setClaimingTrial(true);
+    try {
+      const res = await fetch("/api/trials/claim", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to claim free trial");
+      setFreeTrial({
+        freeTrialClaimed: true,
+        freeTrialClaimedAt: new Date().toISOString(),
+        freeTrialUsed: false,
+        freeTrialUsedAt: null,
+      });
+      toast.success("Free trial claimed! One free B&W order (up to 5 pages) is yours.");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to claim free trial");
+    } finally {
+      setClaimingTrial(false);
+    }
+  };
+
   const remaining = balance?.remainingPages ?? 0;
 
   return (
@@ -158,6 +186,34 @@ export default function SubscribeClient({ initialPacks, initialBalance }: { init
           <span className="text-muted text-sm">pages remaining</span>
         </div>
       </header>
+
+      <section className="glass-card pp-trial">
+        <div className="pp-trial-info">
+          <span className="pp-trial-icon">🎁</span>
+          <div>
+            <h2 className="pp-trial-title">Free Trial</h2>
+            <p className="pp-trial-desc text-secondary">
+              One free Black &amp; White print order of up to 5 pages. Claim once — unused pages do not carry forward.
+            </p>
+          </div>
+        </div>
+        <div className="pp-trial-action">
+          {trialUsed ? (
+            <span className="pp-trial-status used">Used ✓</span>
+          ) : trialAvailable ? (
+            <button
+              className="btn btn-primary"
+              type="button"
+              onClick={handleClaimTrial}
+              disabled={claimingTrial}
+            >
+              {claimingTrial ? <div className="spinner" /> : "Claim Free Trial"}
+            </button>
+          ) : (
+            <span className="pp-trial-status claimed">Claimed ✓</span>
+          )}
+        </div>
+      </section>
 
       <section className="pp-grid">
         {packs.map((pack) => {
@@ -297,6 +353,16 @@ export default function SubscribeClient({ initialPacks, initialBalance }: { init
       <style>{`
         .pp { display: flex; flex-direction: column; gap: 16px; }
         .pp-header { display: flex; justify-content: space-between; gap: 16px; align-items: stretch; }
+        .pp-trial { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 20px; border: 1px solid var(--border-primary); background: var(--bg-card); }
+        .pp-trial-info { display: flex; align-items: flex-start; gap: 12px; }
+        .pp-trial-icon { font-size: 1.6rem; line-height: 1; }
+        .pp-trial-title { font-size: 1.05rem; font-weight: 800; font-family: var(--font-serif); letter-spacing: -0.03em; }
+        .pp-trial-desc { font-size: 0.82rem; margin-top: 4px; line-height: 1.5; }
+        .pp-trial-action { flex-shrink: 0; }
+        .pp-trial-status { display: inline-block; padding: 8px 18px; border: 1px solid var(--border-primary); font-family: var(--font-mono); font-size: 0.78rem; font-weight: 800; letter-spacing: 0.06em; }
+        .pp-trial-status.used { color: var(--text-muted); border-color: var(--border-light); }
+        .pp-trial-status.claimed { color: var(--text-primary); }
+        @media (max-width: 720px) { .pp-trial { flex-direction: column; align-items: flex-start; } }
         .pp-header p { margin-top: 4px; }
         .pp-balance { min-width: 200px; display: flex; flex-direction: column; gap: 4px; justify-content: center; align-items: center; border: 1px solid var(--border-primary); background: var(--bg-card); padding: 20px; }
         .pp-balance-num { font-size: 2.2rem; line-height: 1; font-weight: 800; font-family: var(--font-serif-alt); letter-spacing: -0.03em; }

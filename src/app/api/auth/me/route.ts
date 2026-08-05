@@ -16,11 +16,10 @@ export async function GET() {
       email: true,
       phone: true,
       role: true,
-      hasUsedTrial: true,
-      hasClaimedTrial: true,
-      claimedTrialAt: true,
-      trialOrderId: true,
-      trialUsedAt: true,
+      freeTrialClaimed: true,
+      freeTrialClaimedAt: true,
+      freeTrialUsed: true,
+      freeTrialUsedAt: true,
     },
   });
 
