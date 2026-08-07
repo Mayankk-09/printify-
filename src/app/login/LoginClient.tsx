@@ -620,6 +620,20 @@ export default function LoginClient() {
                 ))}
               </div>
 
+              <p
+                style={{
+                  fontSize: "13px",
+                  color: "#888",
+                  textAlign: "center",
+                  margin: "14px 0 0",
+                  lineHeight: 1.5,
+                  letterSpacing: "0.01em",
+                }}
+              >
+                Didn&apos;t receive the OTP? Please check your Spam/Junk
+                folder as Gmail may occasionally filter verification emails.
+              </p>
+
               <button
                 onClick={handleVerify}
                 disabled={loading}
