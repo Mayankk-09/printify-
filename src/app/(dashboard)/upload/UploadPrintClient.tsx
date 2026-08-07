@@ -4,12 +4,25 @@ import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import Link from "next/link";
-import { getEarliestPickupDate, getAvailableDates, formatDate, formatDateFull, getSlotLabel } from "@/lib/pickup";
+import { getEarliestPickupDate, getAvailableDates, formatDate, getSlotLabel } from "@/lib/pickup";
 import { PAGE_PRICE_BW, PAGE_PRICE_COLOR, calculateOrderCost, formatPrice } from "@/lib/pricing";
 import type { PickupSlot } from "@/lib/pickup";
 
 const MAX_FILE_SIZE = 15 * 1024 * 1024;
 const supportedExtensions = ["pdf", "doc", "docx", "ppt", "pptx"];
+
+const normalizePickupDate = (dateInput: string | Date): string => {
+  if (!dateInput) return "As Scheduled";
+  if (typeof dateInput === "string" && dateInput.includes("-")) {
+    const [year, month, day] = dateInput.split("-").map(Number);
+    return new Date(year, month - 1, day).toLocaleDateString("en-IN", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+  }
+  return new Date(dateInput).toLocaleDateString("en-IN");
+};
 
 export default function UploadPrintClient({
   subscriptions,
@@ -466,9 +479,12 @@ export default function UploadPrintClient({
             )}
             {selectedDate && selectedSlot && (
               <p className="text-sm text-muted" style={{ marginTop: 8 }}>
-                Pickup: {formatDateFull(new Date(selectedDate))} — {getSlotLabel(pickupSlots, selectedSlot)}
+                Pickup: {normalizePickupDate(selectedDate)} — {getSlotLabel(pickupSlots, selectedSlot)}
               </p>
             )}
+            <p style={{ fontWeight: 700, marginTop: 8, fontSize: "0.82rem" }}>
+              Pickup Location: Beside Medical Room and NCC Room
+            </p>
           </div>
 
           {showUpsell && bestPackUpsell && (
