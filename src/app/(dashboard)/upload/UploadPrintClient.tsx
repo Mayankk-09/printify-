@@ -4,12 +4,25 @@ import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import Link from "next/link";
-import { getEarliestPickupDate, getAvailableDates, formatDate, formatDateFull, getSlotLabel } from "@/lib/pickup";
+import { getEarliestPickupDate, getAvailableDates, formatDate, getSlotLabel } from "@/lib/pickup";
 import { PAGE_PRICE_BW, PAGE_PRICE_COLOR, calculateOrderCost, formatPrice } from "@/lib/pricing";
 import type { PickupSlot } from "@/lib/pickup";
 
 const MAX_FILE_SIZE = 15 * 1024 * 1024;
 const supportedExtensions = ["pdf", "doc", "docx", "ppt", "pptx"];
+
+const normalizePickupDate = (dateInput: string | Date): string => {
+  if (!dateInput) return "As Scheduled";
+  if (typeof dateInput === "string" && dateInput.includes("-")) {
+    const [year, month, day] = dateInput.split("-").map(Number);
+    return new Date(year, month - 1, day).toLocaleDateString("en-IN", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+  }
+  return new Date(dateInput).toLocaleDateString("en-IN");
+};
 
 export default function UploadPrintClient({
   subscriptions,
@@ -86,8 +99,8 @@ export default function UploadPrintClient({
   const hasPack = totalAllowed > 0;
   const firstSub = subscriptions[0];
   const packType = firstSub?.pack?.packType || null;
-  const hasClaimedTrial = user?.freeTrialClaimed ?? userData?.freeTrialClaimed ?? false;
-  const hasUsedTrial = user?.freeTrialUsed ?? userData?.freeTrialUsed ?? false;
+  const hasClaimedTrial = userData?.freeTrialClaimed ?? false;
+  const hasUsedTrial = userData?.freeTrialUsed ?? false;
   const trialActive = hasClaimedTrial && !hasUsedTrial;
 
   const validate = (f: File) => {
@@ -159,8 +172,6 @@ export default function UploadPrintClient({
   const numCopies = Number(copies) || 1;
   const pagesPerDoc = fileDetails?.pages || 0;
   const printablePages = pagesPerDoc * numCopies;
-
-  const selectedDateObj = availableDates.find((d) => d.toISOString().slice(0, 10) === selectedDate) || null;
 
   const activeAddons = addons.filter((a) => selectedAddonIds.includes(a.id));
   const addonPrices = activeAddons.map((a) => ({ price: a.price }));
@@ -384,29 +395,24 @@ export default function UploadPrintClient({
           <div className="glass-card">
             <h2 className="up-section-title">Configure</h2>
             <div className="up-config">
-              <div className="up-config-row">
-                <div className="form-group">
-                  <label className="form-label">Copies</label>
-                  <input className="form-input" type="number" min={1} max={10} value={copies} onChange={(e) => setCopies(e.target.value)} />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Print mode</label>
-                  <div className="segmented-control">
-                    <button type="button" className={color === "bw" ? "active" : ""} onClick={() => setColor("bw")}>B&W</button>
-                    <button type="button" className={color === "color" ? "active" : ""} onClick={() => setColor("color")} disabled>Color</button>
-                  </div>
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Sides</label>
-                  <div className="segmented-control">
-                    <button type="button" className={side === "single" ? "active" : ""} onClick={() => setSide("single")}>Single</button>
-                    <button type="button" className={side === "double" ? "active" : ""} onClick={() => setSide("double")}>Double</button>
-                  </div>
+              <div className="form-group">
+                <label className="form-label">Copies</label>
+                <input className="form-input" type="number" min={1} max={10} value={copies} onChange={(e) => setCopies(e.target.value)} />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Print mode</label>
+                <div className="segmented-control">
+                  <button type="button" className={color === "bw" ? "active" : ""} onClick={() => setColor("bw")}>B&W</button>
+                  <button type="button" className={color === "color" ? "active" : ""} onClick={() => setColor("color")} disabled>Color</button>
+                  <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.62rem", color: "#888", display: "block", marginTop: 6 }}>[ NOTICE // COLOR PRINTING TEMPORARILY OFFLINE ]</span>
                 </div>
               </div>
-              <div className="up-offline-notice" role="status">
-                <span className="up-notice-icon" aria-hidden="true">⚠</span>
-                <span>Color printing is currently unavailable.</span>
+              <div className="form-group">
+                <label className="form-label">Sides</label>
+                <div className="segmented-control">
+                  <button type="button" className={side === "single" ? "active" : ""} onClick={() => setSide("single")}>Single</button>
+                  <button type="button" className={side === "double" ? "active" : ""} onClick={() => setSide("double")}>Double</button>
+                </div>
               </div>
             </div>
           </div>
@@ -471,6 +477,14 @@ export default function UploadPrintClient({
                 ))}
               </div>
             )}
+            {selectedDate && selectedSlot && (
+              <p className="text-sm text-muted" style={{ marginTop: 8 }}>
+                Pickup: {normalizePickupDate(selectedDate)} — {getSlotLabel(pickupSlots, selectedSlot)}
+              </p>
+            )}
+            <p style={{ fontWeight: 700, marginTop: 8, fontSize: "0.82rem" }}>
+              Pickup Location: Beside Medical Room and NCC Room
+            </p>
           </div>
 
           {showUpsell && bestPackUpsell && (
@@ -509,126 +523,24 @@ export default function UploadPrintClient({
               </div>
             ) : (
               <div className="up-summary">
-                <div className="up-summary-group">
-                  <span className="up-summary-label">Document</span>
-                  <div className="up-summary-row">
-                    <span className="up-summary-key">File</span>
-                    <strong className="up-summary-file">{fileDetails.fileName}</strong>
-                  </div>
-                  <div className="up-summary-row">
-                    <span className="up-summary-key">Total pages</span>
-                    <strong>{pagesPerDoc}</strong>
-                  </div>
-                </div>
-                <div className="up-summary-group">
-                  <span className="up-summary-label">Printing</span>
-                  <div className="up-summary-row">
-                    <span className="up-summary-key">Copies</span>
-                    <strong>{numCopies}</strong>
-                  </div>
-                  <div className="up-summary-row">
-                    <span className="up-summary-key">Mode</span>
-                    <strong>{color === "color" ? "Color" : "B&W"}</strong>
-                  </div>
-                  <div className="up-summary-row">
-                    <span className="up-summary-key">Sides</span>
-                    <strong>{side === "double" ? "Double" : "Single"}</strong>
-                  </div>
-                </div>
-                {activeAddons.length > 0 && (
-                  <div className="up-summary-group">
-                    <span className="up-summary-label">Add-ons</span>
-                    {activeAddons.map((addon) => (
-                      <div className="up-summary-row" key={addon.id}>
-                        <span className="up-summary-key">{addon.name}</span>
-                        <strong>{addon.price === 0 ? "FREE" : formatPrice(addon.price)}</strong>
-                      </div>
-                    ))}
-                  </div>
+                <div><span>Document cost</span><strong>{formatPrice(breakdown.documentCost)}</strong></div>
+                {breakdown.packDiscount < 0 && (
+                  <div className="up-saved"><span>Pack covers</span><strong>{formatPrice(Math.abs(breakdown.packDiscount))}</strong></div>
                 )}
-                {selectedDate && selectedSlot && (
-                  <div className="up-summary-group">
-                    <span className="up-summary-label">Pickup</span>
-                    <div className="up-summary-row">
-                      <span className="up-summary-key">Date</span>
-                      <strong>{selectedDateObj ? formatDateFull(selectedDateObj) : formatDateFull(new Date(selectedDate))}</strong>
-                    </div>
-                    <div className="up-summary-row">
-                      <span className="up-summary-key">Slot</span>
-                      <strong>{getSlotLabel(pickupSlots, selectedSlot)}</strong>
-                    </div>
-                  </div>
+                {breakdown.extraCharge > 0 && (
+                  <div><span>Extra charge ({chargeablePages} pages)</span><strong>{formatPrice(breakdown.extraCharge)}</strong></div>
                 )}
-                <div className="up-summary-group">
-                  <span className="up-summary-label">Pricing</span>
-                  {trialUsed ? (
-                    <>
-                      <div className="up-trial-banner">FREE TRIAL</div>
-                      <div className="up-summary-row">
-                        <span className="up-summary-key">Pages used</span>
-                        <strong>0 / {trialMaxPagesSetting}</strong>
-                      </div>
-                      <div className="up-total">
-                        <span>Order Total</span>
-                        <strong>₹0</strong>
-                      </div>
-                    </>
-                  ) : hasPack ? (
-                    <>
-                      {firstSub?.pack?.name && (
-                        <div className="up-summary-row">
-                          <span className="up-summary-key">Pack</span>
-                          <strong>{firstSub.pack.name}</strong>
-                        </div>
-                      )}
-                      <div className="up-summary-row">
-                        <span className="up-summary-key">Remaining pages</span>
-                        <strong>{Math.max(0, remainingPages - coveredByPack)}</strong>
-                      </div>
-                      <div className="up-summary-row">
-                        <span className="up-summary-key">Pages used</span>
-                        <strong>{totalUsed + coveredByPack}</strong>
-                      </div>
-                      {chargeablePages > 0 && (
-                        <div className="up-summary-row">
-                          <span className="up-summary-key">Extra pages</span>
-                          <strong>{chargeablePages}</strong>
-                        </div>
-                      )}
-                      {breakdown.addonCost > 0 && (
-                        <div className="up-summary-row">
-                          <span className="up-summary-key">Add-ons</span>
-                          <strong>{formatPrice(breakdown.addonCost)}</strong>
-                        </div>
-                      )}
-                      <div className="up-total">
-                        <span>Amount payable</span>
-                        <strong>{formatPrice(breakdown.grandTotal)}</strong>
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <div className="up-summary-row">
-                        <span className="up-summary-key">Total pages</span>
-                        <strong>{printablePages}</strong>
-                      </div>
-                      <div className="up-summary-row">
-                        <span className="up-summary-key">Price</span>
-                        <strong>{formatPrice(breakdown.documentCost)}</strong>
-                      </div>
-                      {breakdown.addonCost > 0 && (
-                        <div className="up-summary-row">
-                          <span className="up-summary-key">Add-ons</span>
-                          <strong>{formatPrice(breakdown.addonCost)}</strong>
-                        </div>
-                      )}
-                      <div className="up-total">
-                        <span>Grand Total</span>
-                        <strong>{formatPrice(breakdown.grandTotal)}</strong>
-                      </div>
-                    </>
-                  )}
-                </div>
+                {breakdown.addonCost > 0 && (
+                  <div><span>Add-ons</span><strong>{formatPrice(breakdown.addonCost)}</strong></div>
+                )}
+                <div className="up-total"><span>Total</span><strong>{formatPrice(breakdown.grandTotal)}</strong></div>
+              </div>
+            )}
+
+            {hasPack && (
+              <div className="up-pack-info">
+                <span>Pack: {firstSub?.pack?.name}</span>
+                <span>{remainingPages} pages remaining</span>
               </div>
             )}
 
@@ -639,7 +551,7 @@ export default function UploadPrintClient({
             )}
 
             <button
-              className="btn btn-primary w-100 mt-3 up-pay-btn"
+              className="btn btn-primary w-100 mt-3"
               type="button"
               disabled={!fileDetails || submitting || (!selectedSlot && !needsPayment)}
               onClick={handleSubmit}
@@ -651,10 +563,7 @@ export default function UploadPrintClient({
               ) : trialUsed ? (
                 "PLACE FREE TRIAL ORDER"
               ) : needsPayment ? (
-                <span className="pay-btn-text">
-                  <span>PROCEED TO PAY VIA UPI</span>
-                  <span>SECURE VIA RAZORPAY</span>
-                </span>
+                <span className="pay-btn-text">PROCEED TO PAY VIA UPI // SECURE via RAZORPAY</span>
               ) : (
                 "PLACE ORDER via PAGE CREDITS"
               )}
@@ -763,11 +672,7 @@ export default function UploadPrintClient({
         .up-file-info strong { font-size: 0.9rem; word-break: break-word; }
         .up-file-info span { font-size: 0.78rem; color: var(--text-muted); }
         .up-file-remove { border: 1px solid var(--border-primary); background: var(--bg-card); color: var(--text-primary); padding: 6px 10px; cursor: pointer; font-size: 0.75rem; }
-        .up-config { display: flex; flex-direction: column; gap: 10px; }
-        .up-config-row { display: grid; grid-template-columns: 0.6fr 1fr 1fr; gap: 12px; align-items: end; }
-        .up-config-row .form-group { margin-bottom: 0; }
-        .up-offline-notice { display: flex; align-items: center; gap: 6px; width: 100%; max-width: 100%; border: 1px solid var(--border-light); padding: 6px 10px; font-family: var(--font-mono); font-size: 0.62rem; font-weight: 700; letter-spacing: 0.02em; color: var(--text-muted); line-height: 1.4; white-space: nowrap; }
-        .up-notice-icon { font-size: 0.72rem; line-height: 1; flex-shrink: 0; }
+        .up-config { display: grid; grid-template-columns: 0.6fr 1fr 1fr; gap: 12px; align-items: end; }
         .up-addons { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; }
         .up-addon { min-height: 100px; border: 1px solid var(--border-light); background: var(--bg-card); color: var(--text-primary); cursor: pointer; padding: 10px; text-align: left; display: flex; flex-direction: column; gap: 4px; transition: border-color var(--transition-fast), background var(--transition-fast); }
         .up-addon.selected { border-color: var(--border-primary); background: var(--bg-elevated); }
@@ -790,16 +695,14 @@ export default function UploadPrintClient({
         .up-slot-btn:hover { border-color: var(--border-secondary); }
         .up-summary-empty { padding: 16px 0; text-align: center; }
         .up-summary-empty p { margin: 0; }
-        .up-summary { display: flex; flex-direction: column; gap: 14px; }
-        .up-summary-group { display: flex; flex-direction: column; gap: 6px; }
-        .up-summary-label { font-family: var(--font-mono); font-size: 0.62rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); padding-bottom: 4px; border-bottom: 1px solid var(--border-light); }
-        .up-summary-row { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; font-size: 0.85rem; }
-        .up-summary-key { color: var(--text-muted); flex-shrink: 0; }
-        .up-summary-row strong { font-size: 0.88rem; text-align: right; overflow-wrap: anywhere; }
-        .up-summary-file { max-width: 62%; }
-        .up-trial-banner { border: 2px solid var(--bg-black); background: var(--bg-black); color: #fff; text-align: center; font-family: var(--font-mono); font-size: 0.82rem; font-weight: 700; letter-spacing: 0.14em; padding: 8px 12px; }
-        .up-total { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; border-top: 2px solid var(--border-primary); padding-top: 8px; margin-top: 2px; font-weight: 800; }
-        .up-total strong { font-size: 1.05rem; }
+        .up-summary { display: grid; gap: 8px; }
+        .up-summary div { display: flex; justify-content: space-between; gap: 10px; border-bottom: 1px solid var(--border-light); padding-bottom: 6px; font-size: 0.85rem; }
+        .up-summary span { color: var(--text-muted); }
+        .up-summary strong { font-size: 0.9rem; }
+        .up-saved strong { color: var(--text-primary); }
+        .up-total { border-bottom: none !important; border-top: 2px solid var(--border-primary); padding-top: 8px; margin-top: 4px; font-weight: 800; }
+        .up-total strong { font-size: 1.1rem; }
+        .up-pack-info { display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text-muted); padding: 8px 0; border-bottom: 1px solid var(--border-light); margin-bottom: 4px; font-family: var(--font-mono); }
         .up-upsell { border-color: var(--border-primary); background: var(--bg-elevated); }
         .up-upsell-icon { font-size: 2rem; text-align: center; margin-bottom: 4px; }
         .up-upsell h3 { font-weight: 700; margin-bottom: 4px; }
@@ -817,12 +720,10 @@ export default function UploadPrintClient({
         .pay-total { border-bottom: none !important; border-top: 2px solid var(--border-primary); padding-top: 8px; font-weight: 800; font-size: 1rem !important; }
         .pay-total strong { }
         .pay-actions { display: flex; gap: 10px; margin-top: 16px; }
-        .up-pay-btn { white-space: normal; }
-        .pay-btn-text { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; text-align: center; line-height: 1.4; width: 100%; }
+        .pay-btn-text { display: inline-flex; align-items: center; gap: 4px; text-align: center; justify-content: center; width: 100%; }
         @media (max-width: 960px) { .up-layout { grid-template-columns: 1fr; } .up-side { position: static; } }
         @media (max-width: 720px) {
-          .up-config { gap: 8px; }
-          .up-config-row { grid-template-columns: 1fr; gap: 8px; }
+          .up-config { grid-template-columns: 1fr; gap: 8px; }
           .up-config .segmented-control button { padding: 12px 16px; min-height: 44px; font-size: 0.9rem; }
           .up-addons { grid-template-columns: repeat(2, 1fr); }
           .up-addon { min-height: 80px; padding: 12px; }
@@ -834,7 +735,6 @@ export default function UploadPrintClient({
         @media (max-width: 420px) {
           .up-addons { grid-template-columns: 1fr 1fr; gap: 6px; }
           .up-config input { min-height: 44px; }
-          .up-offline-notice { font-size: 0.55rem; padding: 4px 8px; letter-spacing: 0; }
           .up-card { padding: 16px; }
         }
       `}</style>

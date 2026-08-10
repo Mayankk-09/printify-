@@ -189,7 +189,7 @@ export default function ContactPage() {
                 color: "#000",
               }}
             >
-              printify-quick@gmail.com
+              printifyquick@gmail.com
             </a>
             . We aim to respond within 12 hours during operating hours on working days.
           </p>
