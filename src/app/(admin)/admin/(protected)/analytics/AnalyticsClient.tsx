@@ -1,12 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import type { AnalyticsData, AnalyticsRange, AnalyticsBucket, ChartGranularity } from "@/lib/analytics";
+import { useAdminAnalytics } from "../admin-analytics-context";
 
 const RANGE_OPTIONS: Array<{ value: AnalyticsRange; label: string }> = [
   { value: "today", label: "Today" },
-  { value: "week", label: "This Week" },
-  { value: "month", label: "This Month" },
+  { value: "this_week", label: "This Week" },
+  { value: "this_month", label: "This Month" },
+  { value: "all_time", label: "All Time" },
 ];
 
 function formatPaise(paise: number): string {
@@ -23,6 +25,10 @@ function formatInteger(value: number): string {
 
 /** Formats a bucket key as a wall-clock label without any timezone shifting. */
 function bucketLabel(key: string, granularity: ChartGranularity): string {
+  if (granularity === "month") {
+    const [y, m] = key.split("-").map(Number);
+    return new Date(y, m - 1, 1).toLocaleDateString("en-IN", { month: "short", year: "2-digit" });
+  }
   if (granularity === "day") {
     const [y, m, d] = key.split("-").map(Number);
     return new Date(y, m - 1, d).toLocaleDateString("en-IN", { day: "numeric", month: "short" });
@@ -74,32 +80,14 @@ function BarChart({
 
 export default function AnalyticsClient() {
   const [range, setRange] = useState<AnalyticsRange>("today");
-  const [data, setData] = useState<AnalyticsData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const { data, loading, refreshing, error, lastUpdated, refresh } = useAdminAnalytics();
 
-  const load = useCallback(async (r: AnalyticsRange) => {
-    setLoading(true);
-    setError("");
-    try {
-      const res = await fetch(`/api/admin/analytics?range=${encodeURIComponent(r)}`);
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || "Failed to load analytics");
-      setData(json as AnalyticsData);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load analytics");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const rangeData: AnalyticsData | undefined = data?.analytics[range];
+  const ready = !loading && !!rangeData;
 
-  useEffect(() => {
-    load(range);
-  }, [range, load]);
-
-  const totalRevenuePaise = data?.totalRevenuePaise ?? 0;
-  const payPerPageRevenuePaise = data?.payPerPageRevenuePaise ?? 0;
-  const packRevenuePaise = data?.packRevenuePaise ?? 0;
+  const totalRevenuePaise = rangeData?.totalRevenuePaise ?? 0;
+  const payPerPageRevenuePaise = rangeData?.payPerPageRevenuePaise ?? 0;
+  const packRevenuePaise = rangeData?.packRevenuePaise ?? 0;
 
   return (
     <div>
@@ -120,9 +108,19 @@ export default function AnalyticsClient() {
               </button>
             ))}
           </div>
-          <span className={`aa-status ${loading ? "loading" : ""}`}>
-            {loading ? "Updating…" : error ? "Error" : "Live"}
-          </span>
+          <div className="aa-status-row">
+            <span className={`aa-status ${loading || refreshing ? "loading" : ""}`}>
+              {loading ? "Loading" : refreshing ? "Syncing" : error ? "Error" : "Live"}
+            </span>
+            <button
+              type="button"
+              className="aa-refresh-btn"
+              onClick={refresh}
+              disabled={refreshing || loading}
+            >
+              {refreshing ? "Syncing…" : "Refresh"}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -135,70 +133,104 @@ export default function AnalyticsClient() {
       <div className="aa-stats-grid" style={{ marginBottom: 16 }}>
         <div className="glass-card aa-stat-card">
           <span className="aa-stat-label">Total Orders</span>
-          <strong className="aa-stat-value">{formatInteger(data?.totalOrders ?? 0)}</strong>
+          {ready ? <strong className="aa-stat-value">{formatInteger(rangeData.totalOrders)}</strong> : <span className="aa-skeleton aa-skeleton-value" aria-hidden="true" />}
         </div>
         <div className="glass-card aa-stat-card">
           <span className="aa-stat-label">Total Pages Printed</span>
-          <strong className="aa-stat-value">{formatInteger(data?.totalPagesPrinted ?? 0)}</strong>
+          {ready ? <strong className="aa-stat-value">{formatInteger(rangeData.totalPagesPrinted)}</strong> : <span className="aa-skeleton aa-skeleton-value" aria-hidden="true" />}
         </div>
         <div className="glass-card aa-stat-card">
           <span className="aa-stat-label">Total Revenue Received</span>
-          <strong className="aa-stat-value">{formatPaise(totalRevenuePaise)}</strong>
+          {ready ? <strong className="aa-stat-value">{formatPaise(rangeData.totalRevenuePaise)}</strong> : <span className="aa-skeleton aa-skeleton-value" aria-hidden="true" />}
         </div>
         <div className="glass-card aa-stat-card">
           <span className="aa-stat-label">Completed Orders</span>
-          <strong className="aa-stat-value">{formatInteger(data?.completedOrders ?? 0)}</strong>
+          {ready ? <strong className="aa-stat-value">{formatInteger(rangeData.completedOrders)}</strong> : <span className="aa-skeleton aa-skeleton-value" aria-hidden="true" />}
         </div>
       </div>
 
       <div className="aa-secondary-grid" style={{ marginBottom: 16 }}>
         <div className="glass-card aa-stat-card">
           <span className="aa-stat-label">Revenue Breakdown</span>
-          <div className="aa-breakdown">
-            <div className="aa-breakdown-row">
-              <span>Pay Per Page</span>
-              <strong>{formatPaise(payPerPageRevenuePaise)}</strong>
+          {ready ? (
+            <div className="aa-breakdown">
+              <div className="aa-breakdown-row">
+                <span>Pay Per Page</span>
+                <strong>{formatPaise(payPerPageRevenuePaise)}</strong>
+              </div>
+              <div className="aa-breakdown-row">
+                <span>Pack Purchases</span>
+                <strong>{formatPaise(packRevenuePaise)}</strong>
+              </div>
+              <div className="aa-breakdown-row aa-breakdown-total">
+                <span>Total</span>
+                <strong>{formatPaise(payPerPageRevenuePaise + packRevenuePaise)}</strong>
+              </div>
             </div>
-            <div className="aa-breakdown-row">
-              <span>Pack Purchases</span>
-              <strong>{formatPaise(packRevenuePaise)}</strong>
+          ) : (
+            <div className="aa-skeleton-block">
+              <span className="aa-skeleton" aria-hidden="true" />
+              <span className="aa-skeleton" aria-hidden="true" />
+              <span className="aa-skeleton" aria-hidden="true" />
             </div>
-            <div className="aa-breakdown-row aa-breakdown-total">
-              <span>Total</span>
-              <strong>{formatPaise(payPerPageRevenuePaise + packRevenuePaise)}</strong>
-            </div>
-          </div>
+          )}
         </div>
         <div className="glass-card aa-stat-card">
           <span className="aa-stat-label">Estimated Printing Cost</span>
-          <strong className="aa-stat-value">{formatRupees(data?.estimatedPrintingCostRupees ?? 0)}</strong>
-          <p className="aa-stat-hint">₹0.70 per printed page</p>
+          {ready ? (
+            <>
+              <strong className="aa-stat-value">{formatRupees(rangeData.estimatedPrintingCostRupees)}</strong>
+              <p className="aa-stat-hint">₹0.70 per printed page</p>
+            </>
+          ) : (
+            <span className="aa-skeleton aa-skeleton-value" aria-hidden="true" />
+          )}
         </div>
         <div className="glass-card aa-stat-card">
           <span className="aa-stat-label">Estimated Profit</span>
-          <strong className="aa-stat-value">{formatRupees(data?.estimatedProfitRupees ?? 0)}</strong>
-          <p className="aa-stat-hint">Revenue − Printing cost</p>
+          {ready ? (
+            <>
+              <strong className="aa-stat-value">{formatRupees(rangeData.estimatedProfitRupees)}</strong>
+              <p className="aa-stat-hint">Revenue − Printing cost</p>
+            </>
+          ) : (
+            <span className="aa-skeleton aa-skeleton-value" aria-hidden="true" />
+          )}
         </div>
       </div>
 
       <div className="aa-charts-grid">
         <div className="glass-card aa-chart-card">
           <h2 className="aa-section-title">Revenue Chart</h2>
-          <BarChart
-            buckets={data?.revenueBuckets ?? []}
-            granularity={data?.granularity ?? "day"}
-            formatter={formatPaise}
-          />
+          {ready ? (
+            <BarChart
+              buckets={rangeData.revenueBuckets}
+              granularity={rangeData.granularity}
+              formatter={formatPaise}
+            />
+          ) : (
+            <div className="aa-skeleton aa-skeleton-chart" aria-hidden="true" />
+          )}
         </div>
         <div className="glass-card aa-chart-card">
           <h2 className="aa-section-title">Orders Chart</h2>
-          <BarChart
-            buckets={data?.ordersBuckets ?? []}
-            granularity={data?.granularity ?? "day"}
-            formatter={(v) => formatInteger(v)}
-          />
+          {ready ? (
+            <BarChart
+              buckets={rangeData.ordersBuckets}
+              granularity={rangeData.granularity}
+              formatter={(v) => formatInteger(v)}
+            />
+          ) : (
+            <div className="aa-skeleton aa-skeleton-chart" aria-hidden="true" />
+          )}
         </div>
       </div>
+
+      {lastUpdated && (
+        <p className="aa-updated">
+          {refreshing ? "Syncing latest data…" : `Updated ${lastUpdated.toLocaleTimeString()}`}
+        </p>
+      )}
 
       <style>{`
         .aa-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-top: 14px; }
@@ -207,10 +239,14 @@ export default function AnalyticsClient() {
         .aa-filter-btn + .aa-filter-btn { border-left: 1px solid var(--border-primary); }
         .aa-filter-btn:hover { background: var(--bg-elevated); color: var(--text-primary); }
         .aa-filter-btn.active { background: var(--bg-black); color: #fff; }
+        .aa-status-row { display: inline-flex; align-items: center; gap: 12px; }
         .aa-status { font-family: var(--font-mono); font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); display: inline-flex; align-items: center; gap: 6px; }
-        .aa-status::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--border-secondary); }
+        .aa-status::before { content: ""; width: 6px; height: 6px; border-radius: 0px; background: var(--border-secondary); }
         .aa-status.loading::before { background: var(--border-primary); animation: aa-pulse 0.8s ease-in-out infinite alternate; }
         @keyframes aa-pulse { from { opacity: 0.2; } to { opacity: 1; } }
+        .aa-refresh-btn { border: 1px solid #e5e5e5; background: #ffffff; color: var(--text-secondary); font-family: var(--font-mono); font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; padding: 8px 14px; cursor: pointer; transition: background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast); }
+        .aa-refresh-btn:hover:not(:disabled) { background: var(--bg-black); color: #fff; border-color: var(--bg-black); }
+        .aa-refresh-btn:disabled { opacity: 0.5; cursor: not-allowed; }
         .aa-error { border: 1px solid var(--border-primary); border-left: 3px solid var(--text-primary); background: var(--bg-card); color: var(--text-secondary); padding: 12px 16px; margin-bottom: 16px; font-size: 0.85rem; }
         .aa-stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
         .aa-secondary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
@@ -235,6 +271,13 @@ export default function AnalyticsClient() {
         .aa-bar-track { flex: 1; width: 100%; display: flex; align-items: flex-end; justify-content: center; background: var(--bg-elevated); border: 1px solid var(--border-light); border-bottom: none; min-height: 0; }
         .aa-bar-fill { width: 100%; background: var(--bg-black); min-height: 0; }
         .aa-bar-label { font-size: 0.58rem; color: var(--text-muted); font-family: var(--font-mono); white-space: nowrap; }
+        .aa-updated { margin-top: 16px; font-family: var(--font-mono); font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); }
+        .aa-skeleton { display: block; border: 1px solid #ececec; background: linear-gradient(90deg, #f2f2f0 25%, #e7e7e3 37%, #f2f2f0 63%); background-size: 400% 100%; animation: aa-shimmer 1.4s ease infinite; }
+        .aa-skeleton-value { width: 55%; height: 32px; }
+        .aa-skeleton-chart { width: 100%; height: 200px; }
+        .aa-skeleton-block { display: grid; gap: 8px; margin-top: 4px; }
+        .aa-skeleton-block .aa-skeleton { width: 100%; height: 14px; }
+        @keyframes aa-shimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }
         @media (max-width: 960px) {
           .aa-stats-grid { grid-template-columns: repeat(2, 1fr); }
           .aa-secondary-grid { grid-template-columns: 1fr; }
