@@ -70,7 +70,7 @@ export default function ContactPage() {
               color: "#000",
             }}
           >
-            Contact Us
+            Contact-Us
           </h1>
         </div>
 
