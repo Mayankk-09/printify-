@@ -280,6 +280,13 @@ export default function AdminOrdersClient() {
                       <td>
                         <strong className="ao-order-num">{o.orderNumber}</strong>
                         <small>{o.fileName || "—"}</small>
+                        {o.orderAddons && o.orderAddons.length > 0 && (
+                          <div className="ao-addon-tags">
+                            {o.orderAddons.map((a: any) => (
+                              <span key={a.id} className="ao-addon-tag ao-addon-tag--sm">{a.name}</span>
+                            ))}
+                          </div>
+                        )}
                       </td>
                       <td>
                         <strong>{o.user.name}</strong>
@@ -434,6 +441,13 @@ export default function AdminOrdersClient() {
               <div className="ao-detail-section">
                 <h3>Document</h3>
                 <p><strong>{selectedOrder.fileName || "Document removed (retention expired)"}</strong></p>
+                {selectedOrder.orderAddons && selectedOrder.orderAddons.length > 0 && (
+                  <div className="ao-addon-tags">
+                    {selectedOrder.orderAddons.map((a: any) => (
+                      <span key={a.id} className="ao-addon-tag">{a.name}</span>
+                    ))}
+                  </div>
+                )}
                 {selectedOrder.filePath && (
                   <button
                     className="btn btn-ghost btn-sm"
@@ -578,6 +592,9 @@ export default function AdminOrdersClient() {
         .ao-pickup-code { font-weight: 700; font-family: var(--font-mono); letter-spacing: 0.04em; }
         .ao-detail-actions { display: flex; gap: 10px; justify-content: flex-end; border-top: 1px solid var(--border-light); padding-top: 16px; }
         .ao-page-edit strong { font-family: var(--font-mono); }
+        .ao-addon-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+        .ao-addon-tag { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 0.68rem; font-weight: 600; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: var(--text-muted); letter-spacing: 0.02em; font-family: var(--font-mono); }
+        .ao-addon-tag--sm { font-size: 0.62rem; padding: 1px 6px; }
 
         .btn-sm { min-height: 30px; padding: 5px 10px; font-size: 0.78rem; }
 
