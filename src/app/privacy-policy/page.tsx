@@ -4,9 +4,9 @@ import Link from "next/link";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Privacy Policy — PRINTIFY CORE",
+  title: "Privacy Policy — PRINTIFY ",
   description:
-    "Privacy policy for the PRINTIFY CORE campus printing platform at printify.studio.",
+    "Privacy policy for the PRINTIFY campus printing platform at printify.studio.",
 };
 
 export default function PrivacyPolicyPage() {
@@ -210,7 +210,7 @@ export default function PrivacyPolicyPage() {
                   color: "#000",
                 }}
               >
-                printify-quick@gmail.com
+                printifyquick@gmail.com
               </a>
               .
             </p>

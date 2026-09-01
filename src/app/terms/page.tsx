@@ -4,9 +4,9 @@ import Link from "next/link";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Terms of Service — PRINTIFY CORE",
+  title: "Terms of Service — PRINTIFY ",
   description:
-    "Terms of service for the PRINTIFY CORE campus printing platform at printify.studio.",
+    "Terms of service for the PRINTIFY  campus printing platform at printify.studio.",
 };
 
 export default function TermsPage() {
@@ -270,7 +270,7 @@ export default function TermsPage() {
                   color: "#000",
                 }}
               >
-                printify-quick@gmail.com
+                printifyquick@gmail.com
               </a>
               .
             </p>

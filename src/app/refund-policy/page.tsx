@@ -4,9 +4,9 @@ import Link from "next/link";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Refund Policy — PRINTIFY CORE",
+  title: "Refund Policy — PRINTIFY ",
   description:
-    "Refund policy for the PRINTIFY CORE campus printing platform at printify.studio.",
+    "Refund policy for the PRINTIFY  campus printing platform at printify.studio.",
 };
 
 export default function RefundPolicyPage() {
@@ -162,7 +162,7 @@ export default function RefundPolicyPage() {
                   color: "#000",
                 }}
               >
-                printify-quick@gmail.com
+                printifyquick@gmail.com
               </a>{" "}
               with your order ID. Our team will verify the hardware issue and
               process the refund to your original UPI handle.
