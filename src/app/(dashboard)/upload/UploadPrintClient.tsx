@@ -24,6 +24,9 @@ const normalizePickupDate = (dateInput: string | Date): string => {
   return new Date(dateInput).toLocaleDateString("en-IN");
 };
 
+const toLocalDateStr = (date: Date): string =>
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+
 export default function UploadPrintClient({
   subscriptions,
   totalAllowed,
@@ -80,7 +83,7 @@ export default function UploadPrintClient({
     setAvailableDates(dates);
     setPickupSlots(initialPickupSettings.slots);
     if (dates.length > 0) {
-      setSelectedDate(dates[0].toISOString().slice(0, 10));
+      setSelectedDate(toLocalDateStr(dates[0]));
     }
     if (initialPickupSettings.slots.length > 0) {
       setSelectedSlot(initialPickupSettings.slots[0].value);
@@ -447,7 +450,7 @@ export default function UploadPrintClient({
             <h2 className="up-section-title">Pickup</h2>
             <div className="up-pickup-dates">
               {availableDates.map((date) => {
-                const dateStr = date.toISOString().slice(0, 10);
+                const dateStr = toLocalDateStr(date);
                 const isSelected = selectedDate === dateStr;
                 return (
                   <button

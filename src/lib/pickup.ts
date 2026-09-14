@@ -50,21 +50,9 @@ export function getWorkingDays(workingDaysStr: string): number[] {
 }
 
 export function getEarliestPickupDate(cutoffTime: string, now: Date = new Date()): Date {
-  const [cutoffH, cutoffM] = cutoffTime.split(":").map(Number);
-  const currentHour = now.getHours();
-  const currentMin = now.getMinutes();
-  
-  const currentTotalMin = currentHour * 60 + currentMin;
-  const cutoffTotalMin = cutoffH * 60 + cutoffM;
-  
   const earliest = new Date(now);
-  if (currentTotalMin < cutoffTotalMin) {
-    // Before cutoff, earliest is tomorrow
-    earliest.setDate(earliest.getDate() + 1);
-  } else {
-    // After cutoff, earliest is day after tomorrow
-    earliest.setDate(earliest.getDate() + 2);
-  }
+  // Pickup is always available starting tomorrow, regardless of cutoff time
+  earliest.setDate(earliest.getDate() + 1);
   earliest.setHours(0, 0, 0, 0);
   return earliest;
 }
