@@ -1,4 +1,4 @@
-# PrintFlow
+# Printify
 
 > Production-ready document printing management platform. Students upload documents, purchase page-based packs, and collect printed documents through an admin-managed workflow.
 
